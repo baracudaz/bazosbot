@@ -15,7 +15,6 @@ logger = logging.getLogger(__name__)
 
 WIKI_API = "https://wiki.postmarketos.org/w/api.php"
 CACHE_FILE = Path("data/postmarketos_models.json")
-ENV_FILE = Path(os.getenv('POSTMARKETOS_MODELS_FILE', '')) if os.getenv('POSTMARKETOS_MODELS_FILE') else None
 
 
 def get_supported_models() -> Set[str]:
@@ -27,16 +26,19 @@ def get_supported_models() -> Set[str]:
     3. Fall back to HTML scraping of the category page if the API is blocked.
     4. Fall back to data/postmarketos_models.json cache.
     """
-    # 1) env-provided file — if set, honor it immediately and do NOT attempt network fetches
+    # 1) env-provided file — check environment at call time (honor and return immediately if present)
     try:
-        if ENV_FILE and ENV_FILE.exists():
-            txt = ENV_FILE.read_text()
-            try:
-                arr = json.loads(txt)
-                return {t.lower() for t in arr}
-            except Exception:
-                lines = [l.strip() for l in txt.splitlines() if l.strip()]
-                return {l.lower() for l in lines}
+        env_path = os.getenv('POSTMARKETOS_MODELS_FILE')
+        if env_path:
+            env_file = Path(env_path)
+            if env_file.exists():
+                txt = env_file.read_text()
+                try:
+                    arr = json.loads(txt)
+                    return {t.lower() for t in arr}
+                except Exception:
+                    lines = [l.strip() for l in txt.splitlines() if l.strip()]
+                    return {l.lower() for l in lines}
     except Exception:
         logger.debug("failed to load POSTMARKETOS_MODELS_FILE")
 
