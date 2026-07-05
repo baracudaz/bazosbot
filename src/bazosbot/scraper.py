@@ -191,6 +191,8 @@ def extract_listings_from_html(html: str, base_url: str) -> List[Dict]:
 
 
 def search_listings(category_url: str, keywords: List[str], supported_models: List[str] | None = None) -> List[Dict]:
+    """Return listings ...
+    """
     """Return listings from either RSS or HTML that match any keyword or supported model.
 
     Matching is done case-insensitively and with fuzzy matching for typos. `supported_models`
@@ -212,7 +214,10 @@ def search_listings(category_url: str, keywords: List[str], supported_models: Li
                 for k in keys:
                     if fuzzy_contains(title, k):
                         logger.debug("fuzzy matched entry title=%s keyword=%s", title[:80], k)
-                        results.append(e)
+-                        results.append(e)
++                        e['matched_by'] = k
++                        e['match_type'] = 'keyword'
++                        results.append(e)
                         matched = True
                         break
             if matched:
@@ -222,7 +227,10 @@ def search_listings(category_url: str, keywords: List[str], supported_models: Li
                 for m in models:
                     if fuzzy_contains(title, m):
                         logger.debug("fuzzy matched entry title=%s model=%s", title[:80], m[:60])
-                        results.append(e)
+-                        results.append(e)
++                        e['matched_by'] = m
++                        e['match_type'] = 'model'
++                        results.append(e)
                         matched = True
                         break
             if matched:
@@ -230,7 +238,7 @@ def search_listings(category_url: str, keywords: List[str], supported_models: Li
             if not keys and not models:
                 results.append(e)
         return results
-
+*** End Patch
     # fallback to HTML
     html = fetch_category_html(category_url)
     items = extract_listings_from_html(html, category_url)
@@ -241,20 +249,24 @@ def search_listings(category_url: str, keywords: List[str], supported_models: Li
             for k in keys:
                 if fuzzy_contains(title, k):
                     logger.debug("fuzzy matched html entry title=%s keyword=%s", title[:80], k)
-                    results.append(it)
-                    matched = True
-                    break
-        if matched:
-            continue
-        if models:
-            for m in models:
-                if fuzzy_contains(title, m):
-                    logger.debug("fuzzy matched html entry title=%s model=%s", title[:80], m[:60])
-                    results.append(it)
-                    matched = True
-                    break
-        if matched:
-            continue
-        if not keys and not models:
-            results.append(it)
+                it['matched_by'] = k
+                it['match_type'] = 'keyword'
+                results.append(it)
+                matched = True
+                break
+    if matched:
+        continue
+    if models:
+        for m in models:
+            if fuzzy_contains(title, m):
+                logger.debug("fuzzy matched html entry title=%s model=%s", title[:80], m[:60])
+                it['matched_by'] = m
+                it['match_type'] = 'model'
+                results.append(it)
+                matched = True
+                break
+    if matched:
+        continue
+    if not keys and not models:
+        results.append(it)
     return results

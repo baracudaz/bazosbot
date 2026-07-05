@@ -109,7 +109,17 @@ def main_loop():
             if uid in seen:
                 logger.debug("skipping seen uid=%s", uid)
                 continue
-            seen.add(uid)
+
+            # additional confirmation: require strong match for keyword matches to avoid false positives
+            matched_by = m.get('matched_by')
+            match_type = m.get('match_type')
+            if match_type == 'keyword' and matched_by:
+                # use scraper strong_match
+                from .scraper import strong_match
+                if not strong_match(m.get('title') or '', matched_by):
+                    logger.debug("rejected fuzzy-only match for uid=%s matched_by=%s title=%s", uid, matched_by, (m.get('title') or '')[:120])
+                    continue
+
             # run evaluation
             supported = get_supported_models()
             eval_res = evaluate_listing({
