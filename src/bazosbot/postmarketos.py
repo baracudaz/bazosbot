@@ -16,9 +16,6 @@ logger = logging.getLogger(__name__)
 WIKI_API = "https://wiki.postmarketos.org/w/api.php"
 CACHE_FILE = Path("data/postmarketos_models.json")
 ENV_FILE = Path(os.getenv('POSTMARKETOS_MODELS_FILE', '')) if os.getenv('POSTMARKETOS_MODELS_FILE') else None
-CACHE_TTL = int(os.getenv('POSTMARKETOS_CACHE_TTL', '86400'))  # seconds; default 1 day
-# Internal: ensure we only attempt to refresh the cache once per process (on startup)
-_cache_refreshed = False
 
 
 def get_supported_models() -> Set[str]:
@@ -30,58 +27,16 @@ def get_supported_models() -> Set[str]:
     3. Fall back to HTML scraping of the category page if the API is blocked.
     4. Fall back to data/postmarketos_models.json cache.
     """
-    # 1) env-provided file
+    # 1) env-provided file — if set, honor it immediately and do NOT attempt network fetches
     try:
         if ENV_FILE and ENV_FILE.exists():
-            # If the env-provided file is the cache file path, check TTL and refresh if stale
+            txt = ENV_FILE.read_text()
             try:
-                env_resolved = ENV_FILE.resolve()
-                cache_resolved = CACHE_FILE.resolve()
+                arr = json.loads(txt)
+                return {t.lower() for t in arr}
             except Exception:
-                env_resolved = ENV_FILE
-                cache_resolved = CACHE_FILE
-
-            if env_resolved == cache_resolved:
-                # check age
-                try:
-                    mtime = CACHE_FILE.stat().st_mtime
-                    age = int(time.time() - mtime)
-                except Exception:
-                    age = None
-                if age is not None and CACHE_TTL and age > CACHE_TTL:
-                    # Only attempt a network refresh once per process (on startup). Subsequent calls will use the
-                    # cached file to avoid repeated network traffic.
-                    global _cache_refreshed
-                    if _cache_refreshed:
-                        logger.debug("postmarketos cache is stale but already attempted refresh in this process; using cached file")
-                        try:
-                            txt = ENV_FILE.read_text()
-                            arr = json.loads(txt)
-                            return {t.lower() for t in arr}
-                        except Exception:
-                            lines = [l.strip() for l in txt.splitlines() if l.strip()]
-                            return {l.lower() for l in lines}
-                    # mark that a refresh has been attempted for this process and fall through to fetch logic
-                    logger.debug("postmarketos cache is stale (%ss > %ss), attempting one-time refresh", age, CACHE_TTL)
-                    _cache_refreshed = True
-                else:
-                    # cache not stale — load and return
-                    txt = ENV_FILE.read_text()
-                    try:
-                        arr = json.loads(txt)
-                        return {t.lower() for t in arr}
-                    except Exception:
-                        lines = [l.strip() for l in txt.splitlines() if l.strip()]
-                        return {l.lower() for l in lines}
-            else:
-                # env file is some other file the user supplied — honor it immediately
-                txt = ENV_FILE.read_text()
-                try:
-                    arr = json.loads(txt)
-                    return {t.lower() for t in arr}
-                except Exception:
-                    lines = [l.strip() for l in txt.splitlines() if l.strip()]
-                    return {l.lower() for l in lines}
+                lines = [l.strip() for l in txt.splitlines() if l.strip()]
+                return {l.lower() for l in lines}
     except Exception:
         logger.debug("failed to load POSTMARKETOS_MODELS_FILE")
 
