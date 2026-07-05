@@ -17,6 +17,8 @@ WIKI_API = "https://wiki.postmarketos.org/w/api.php"
 CACHE_FILE = Path("data/postmarketos_models.json")
 ENV_FILE = Path(os.getenv('POSTMARKETOS_MODELS_FILE', '')) if os.getenv('POSTMARKETOS_MODELS_FILE') else None
 CACHE_TTL = int(os.getenv('POSTMARKETOS_CACHE_TTL', '86400'))  # seconds; default 1 day
+# Internal: ensure we only attempt to refresh the cache once per process (on startup)
+_cache_refreshed = False
 
 
 def get_supported_models() -> Set[str]:
@@ -47,8 +49,21 @@ def get_supported_models() -> Set[str]:
                 except Exception:
                     age = None
                 if age is not None and CACHE_TTL and age > CACHE_TTL:
-                    logger.debug("postmarketos cache is stale (%ss > %ss), attempting refresh", age, CACHE_TTL)
-                    # fall through to fetch logic below to refresh cache; but if refresh fails below, we'll still use the stale cache
+                    # Only attempt a network refresh once per process (on startup). Subsequent calls will use the
+                    # cached file to avoid repeated network traffic.
+                    global _cache_refreshed
+                    if _cache_refreshed:
+                        logger.debug("postmarketos cache is stale but already attempted refresh in this process; using cached file")
+                        try:
+                            txt = ENV_FILE.read_text()
+                            arr = json.loads(txt)
+                            return {t.lower() for t in arr}
+                        except Exception:
+                            lines = [l.strip() for l in txt.splitlines() if l.strip()]
+                            return {l.lower() for l in lines}
+                    # mark that a refresh has been attempted for this process and fall through to fetch logic
+                    logger.debug("postmarketos cache is stale (%ss > %ss), attempting one-time refresh", age, CACHE_TTL)
+                    _cache_refreshed = True
                 else:
                     # cache not stale — load and return
                     txt = ENV_FILE.read_text()
