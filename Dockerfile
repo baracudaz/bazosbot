@@ -19,10 +19,12 @@ COPY . /app
 
 # non-root user
 RUN useradd -m botuser || true
-USER botuser
 
-# data dir needs to be writable
+# data dir needs to be writable (create and chown while still root)
 RUN mkdir -p /app/data && chown botuser:botuser /app/data
+
+# switch to non-root user
+USER botuser
 
 WORKDIR /app
 
