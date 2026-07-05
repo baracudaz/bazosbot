@@ -34,7 +34,6 @@ DATA_DIR.mkdir(exist_ok=True)
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 BAZOS_SEARCH_URL = os.getenv("BAZOS_SEARCH_URL", "https://www.bazos.sk/rss.php?rub=mo&cat=451")
-TARGET_KEYWORDS = os.getenv("TARGET_KEYWORDS", "").split(",")
 CHECK_INTERVAL = int(os.getenv("CHECK_INTERVAL", "300"))
 PRICE_CAP_EUR = float(os.getenv("PRICE_CAP_EUR", "50"))  # strict cap; entries without parseable price are excluded
 
@@ -54,15 +53,13 @@ def save_seen(s):
 
 
 def build_search_keywords() -> list:
-    # combine explicit keywords with postmarketOS-supported models
+    # use postmarketOS-supported models as search keywords
     pm = get_supported_models()
     pm_keywords = [t.lower() for t in pm]
-    kws = [k.strip().lower() for k in TARGET_KEYWORDS if k.strip()]
-    combined = kws + pm_keywords
-    # dedupe and limit
+    # dedupe
     seen = set()
     out = []
-    for k in combined:
+    for k in pm_keywords:
         if k and k not in seen:
             seen.add(k)
             out.append(k)

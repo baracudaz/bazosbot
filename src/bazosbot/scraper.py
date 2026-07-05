@@ -241,12 +241,14 @@ def search_listings(category_url: str, keywords: List[str], supported_models: Li
         entries = fetch_rss_entries(category_url)
         for e in entries:
             title = e.get('title', '') or ''
+            url = e.get('link', '') or e.get('url', '') or ''
+            searchable = f"{title} {url}".strip()
             matched = False
             # check keywords
             if keys:
                 for k in keys:
-                    if fuzzy_contains(title, k):
-                        logger.debug("fuzzy matched entry title=%s keyword=%s", title[:80], k)
+                    if fuzzy_contains(searchable, k):
+                        logger.debug("fuzzy matched entry title/url=%s keyword=%s", searchable[:120], k)
                         e['matched_by'] = k
                         e['match_type'] = 'keyword'
                         results.append(e)
@@ -257,8 +259,8 @@ def search_listings(category_url: str, keywords: List[str], supported_models: Li
             # check supported models
             if models:
                 for m in models:
-                    if fuzzy_contains(title, m):
-                        logger.debug("fuzzy matched entry title=%s model=%s", title[:80], m[:60])
+                    if fuzzy_contains(searchable, m):
+                        logger.debug("fuzzy matched entry title/url=%s model=%s", searchable[:120], m[:60])
                         e['matched_by'] = m
                         e['match_type'] = 'model'
                         results.append(e)
@@ -275,11 +277,13 @@ def search_listings(category_url: str, keywords: List[str], supported_models: Li
     items = extract_listings_from_html(html, category_url)
     for it in items:
         title = it.get('title', '') or ''
+        url = it.get('url', '') or ''
+        searchable = f"{title} {url}".strip()
         matched = False
         if keys:
             for k in keys:
-                if fuzzy_contains(title, k):
-                    logger.debug("fuzzy matched html entry title=%s keyword=%s", title[:80], k)
+                if fuzzy_contains(searchable, k):
+                    logger.debug("fuzzy matched html entry title/url=%s keyword=%s", searchable[:120], k)
                     it['matched_by'] = k
                     it['match_type'] = 'keyword'
                     results.append(it)
@@ -289,8 +293,8 @@ def search_listings(category_url: str, keywords: List[str], supported_models: Li
             continue
         if models:
             for m in models:
-                if fuzzy_contains(title, m):
-                    logger.debug("fuzzy matched html entry title=%s model=%s", title[:80], m[:60])
+                if fuzzy_contains(searchable, m):
+                    logger.debug("fuzzy matched html entry title/url=%s model=%s", searchable[:120], m[:60])
                     it['matched_by'] = m
                     it['match_type'] = 'model'
                     results.append(it)
