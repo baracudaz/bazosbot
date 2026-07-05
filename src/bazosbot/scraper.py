@@ -53,6 +53,39 @@ def fuzzy_contains(text: str, key: str, ratio_thresh: float = 0.7, token_thresh:
     return False
 
 
+def strong_match(text: str, key: str, ratio_token_thresh: float = 0.8) -> bool:
+    """Stricter confirmation: every important token in key must appear approximately in text.
+
+    Important tokens are tokens containing digits or length > 2. Uses SequenceMatcher per token
+    to allow minor typos.
+    """
+    if not key or not text:
+        return False
+    t = text.lower()
+    k = key.lower()
+    # quick exact containment
+    if k in t:
+        return True
+    ktoks = [tok for tok in re.findall(r"\w+", k) if (any(c.isdigit() for c in tok) or len(tok) > 2)]
+    if not ktoks:
+        return False
+    for tok in ktoks:
+        # if token appears exactly, good
+        if tok in t:
+            continue
+        # allow fuzzy token match against any substring window
+        found = False
+        # try matching against title tokens
+        ttoks = re.findall(r"\w+", t)
+        for wt in ttoks:
+            if difflib.SequenceMatcher(None, tok, wt).ratio() >= ratio_token_thresh:
+                found = True
+                break
+        if not found:
+            return False
+    return True
+
+
 PRICE_RE = re.compile(r"(\d[\d\s,.]*\s*(?:€|eur|eur\.|sk|kč|kc))", re.IGNORECASE)
 
 # normalize price formats like "199 €", "1 999 Kč" into integer EUR when possible
