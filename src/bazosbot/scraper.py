@@ -7,6 +7,7 @@ and attempt to extract price and published date when available.
 from typing import List, Dict
 import re
 from urllib.parse import urljoin
+import difflib
 
 import requests
 import feedparser
@@ -14,6 +15,42 @@ from bs4 import BeautifulSoup
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+def fuzzy_contains(text: str, key: str, ratio_thresh: float = 0.7, token_thresh: float = 0.6) -> bool:
+    """Return True if `key` is approximately contained in `text`.
+
+    Heuristics used (in order):
+    - exact substring
+    - SequenceMatcher ratio between key and whole text
+    - token overlap (fraction of key tokens present in text)
+    - short-window substring SequenceMatcher
+    """
+    if not key or not text:
+        return False
+    t = text.lower()
+    k = key.lower()
+    if k in t:
+        return True
+    # SequenceMatcher on whole strings (good for small differences/typos)
+    ratio = difflib.SequenceMatcher(None, k, t).ratio()
+    if ratio >= ratio_thresh:
+        return True
+    # token overlap: fraction of key tokens that appear in title tokens
+    ktoks = set(re.findall(r"\w+", k))
+    ttoks = set(re.findall(r"\w+", t))
+    if ktoks and ttoks:
+        overlap = len(ktoks & ttoks) / len(ktoks)
+        if overlap >= token_thresh:
+            return True
+    # short-window approximate substring matching
+    # slide a window of length around the key length across the title
+    win = max(10, len(k) + 10)
+    for i in range(0, max(1, len(t) - win + 1)):
+        sub = t[i : i + win]
+        if difflib.SequenceMatcher(None, k, sub).ratio() >= ratio_thresh:
+            return True
+    return False
 
 
 PRICE_RE = re.compile(r"(\d[\d\s,.]*\s*(?:€|eur|eur\.|sk|kč|kc))", re.IGNORECASE)
@@ -165,11 +202,17 @@ def search_listings(category_url: str, keywords: List[str]) -> List[Dict]:
     if 'rss' in category_url or category_url.endswith('.xml') or 'rss.php' in category_url:
         entries = fetch_rss_entries(category_url)
         for e in entries:
+            title = e.get('title', '') or ''
             if keys:
+                matched = False
                 for k in keys:
-                    if k in e.get('title', ''):
+                    if fuzzy_contains(title, k):
+                        logger.debug("fuzzy matched entry title=%s keyword=%s", title[:80], k)
                         results.append(e)
+                        matched = True
                         break
+                if matched:
+                    continue
             else:
                 results.append(e)
         return results
@@ -178,9 +221,11 @@ def search_listings(category_url: str, keywords: List[str]) -> List[Dict]:
     html = fetch_category_html(category_url)
     items = extract_listings_from_html(html, category_url)
     for it in items:
+        title = it.get('title', '') or ''
         if keys:
             for k in keys:
-                if k in it.get('title', ''):
+                if fuzzy_contains(title, k):
+                    logger.debug("fuzzy matched html entry title=%s keyword=%s", title[:80], k)
                     results.append(it)
                     break
         else:
