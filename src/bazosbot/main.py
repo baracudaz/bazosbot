@@ -17,8 +17,9 @@ from .scraper import search_listings
 from .notifier import send_telegram
 
 
-load_dotenv()
 import logging
+
+load_dotenv()
 
 # logging config
 LOG_LEVEL = os.getenv('DEBUG', '').lower() in ('1', 'true', 'yes') and logging.DEBUG or logging.INFO

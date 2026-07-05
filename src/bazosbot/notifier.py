@@ -1,5 +1,4 @@
 """Simple Telegram notifier using bot HTTP API via requests."""
-import os
 import requests
 import logging
 

@@ -66,7 +66,7 @@ def fetch_rss_entries(url: str) -> List[Dict]:
         parsed = feedparser.parse(r.content)
         entries = []
         logger.debug("RSS feed parsed entries=%d", len(parsed.entries))
-            for e in parsed.entries:
+        for e in parsed.entries:
             title = (e.get("title") or "").strip()
             link = e.get("link") or e.get("id") or ""
             published = e.get("published") or e.get("updated") or None
