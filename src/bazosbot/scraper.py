@@ -11,6 +11,9 @@ from urllib.parse import urljoin
 import requests
 import feedparser
 from bs4 import BeautifulSoup
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 PRICE_RE = re.compile(r"(\d[\d\s,.]*\s*(?:€|eur|eur\.|sk|kč|kc))", re.IGNORECASE)
@@ -26,7 +29,7 @@ def parse_price_to_eur(price_str: str) -> float | None:
         return None
     s = price_str.strip().lower()
     # extract number
-    num = re.sub(r"[^0-9,.]", "", s)
+    num = re.sub(r"[^0-9,."]", "", s)
     # replace commas with dots if looks like decimal
     num = num.replace(',', '.')
     try:
@@ -36,16 +39,22 @@ def parse_price_to_eur(price_str: str) -> float | None:
         try:
             val = float(num.replace(' ', ''))
         except Exception:
+            logger.debug("parse_price_to_eur failed to parse numeric from %s", price_str)
             return None
     # determine currency by suffix
     if 'k' in s and ('kč' in s or 'kc' in s):
         # assume CZK -> convert approx 25 CZK per EUR
-        return round(val / 25.0, 2)
+        eur = round(val / 25.0, 2)
+        logger.debug("parsed price %s as %s EUR (assumed CZK)", price_str, eur)
+        return eur
     if 'sk' in s:
         # old Slovak crowns — unknown; return None
+        logger.debug("parse_price_to_eur encountered SK currency for %s", price_str)
         return None
     # default assume EUR
-    return round(val, 2)
+    eur = round(val, 2)
+    logger.debug("parsed price %s as %s EUR", price_str, eur)
+    return eur
 
 
 
@@ -56,6 +65,7 @@ def fetch_rss_entries(url: str) -> List[Dict]:
         r.raise_for_status()
         parsed = feedparser.parse(r.content)
         entries = []
+        logger.debug("RSS feed parsed entries=%d", len(parsed.entries))
         for e in parsed.entries:
             title = (e.get("title") or "").strip()
             link = e.get("link") or e.get("id") or ""
@@ -63,9 +73,11 @@ def fetch_rss_entries(url: str) -> List[Dict]:
             summary = (e.get("summary") or "").strip()
             price = extract_price(title + " " + summary)
             price_eur = parse_price_to_eur(price) if price else None
+            logger.debug("entry title=%s link=%s price=%s price_eur=%s", title[:80], link, price, price_eur)
             entries.append({"title": title.lower(), "url": link, "published": published, "price": price, "price_eur": price_eur})
         return entries
-    except Exception:
+    except Exception as ex:
+        logger.exception("failed to fetch or parse RSS %s: %s", url, ex)
         return []
 
 
@@ -74,7 +86,9 @@ def extract_price(text: str):
         return None
     m = PRICE_RE.search(text)
     if m:
-        return m.group(1).strip()
+        found = m.group(1).strip()
+        logger.debug("extract_price found=%s in text=%s", found, (text or '')[:120])
+        return found
     return None
 
 

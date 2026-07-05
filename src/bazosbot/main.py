@@ -18,6 +18,13 @@ from .notifier import send_telegram
 
 
 load_dotenv()
+import logging
+
+# logging config
+LOG_LEVEL = os.getenv('DEBUG', '').lower() in ('1', 'true', 'yes') and logging.DEBUG or logging.INFO
+logging.basicConfig(level=LOG_LEVEL, format='%(asctime)s %(levelname)s %(message)s')
+logger = logging.getLogger(__name__)
+
 DATA_DIR = Path("data")
 SEEN_FILE = DATA_DIR / "seen.json"
 DATA_DIR.mkdir(exist_ok=True)
@@ -74,9 +81,11 @@ def main_loop():
     while True:
         keywords = build_search_keywords()
         if not keywords:
-            print("No keywords configured; exiting.")
+            logger.info("No keywords configured; exiting.")
             return
+        logger.debug("search keywords count=%d", len(keywords))
         matches = search_listings(BAZOS_SEARCH_URL, keywords)
+        logger.debug("raw matches found=%d", len(matches))
         for m in matches:
             # Apply strict price cap: require parseable price and value <= PRICE_CAP_EUR
             price_eur = m.get('price_eur')
@@ -94,12 +103,15 @@ def main_loop():
                 # fallback to title-based UID
                 uid = (m.get('title') or '')[:200]
             if uid in seen:
+                logger.debug("skipping seen uid=%s", uid)
                 continue
             seen.add(uid)
             msg = format_message(m)
-            print(msg)
+            logger.info("New match: %s", uid)
+            logger.debug("message=\n%s", msg)
             if TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID:
-                send_telegram(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, msg)
+                ok = send_telegram(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, msg)
+                logger.info("telegram send status=%s", ok)
         save_seen(seen)
         time.sleep(CHECK_INTERVAL)
 
