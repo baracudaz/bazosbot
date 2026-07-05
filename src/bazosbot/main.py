@@ -24,7 +24,7 @@ load_dotenv()
 
 # logging config
 LOG_LEVEL = os.getenv('DEBUG', '').lower() in ('1', 'true', 'yes') and logging.DEBUG or logging.INFO
-logging.basicConfig(level=LOG_LEVEL, format='%(asctime)s %(levelname)s %(message)s')
+logging.basicConfig(level=LOG_LEVEL, format='%(asctime)s %(levelname)s [%(module)s:%(funcName)s] %(message)s')
 logger = logging.getLogger(__name__)
 
 DATA_DIR = Path("data")
