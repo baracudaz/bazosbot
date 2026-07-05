@@ -149,6 +149,13 @@ def main_loop():
             if TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID:
                 ok = send_telegram(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, msg)
                 logger.info("telegram send status=%s", ok)
+                if ok:
+                    seen.add(uid)
+                else:
+                    logger.warning("not marking uid=%s as seen because telegram send failed", uid)
+            else:
+                # no telegram configured — still mark as seen to avoid reprocessing
+                seen.add(uid)
         save_seen(seen)
         time.sleep(CHECK_INTERVAL)
 
