@@ -85,8 +85,10 @@ def main_loop():
         if not keywords:
             logger.info("No keywords configured; exiting.")
             return
-        logger.debug("search keywords count=%d", len(keywords))
-        matches = search_listings(BAZOS_SEARCH_URL, keywords)
+        # also pass postmarketOS model list to scraper for matching
+        supported_models = get_supported_models()
+        logger.debug("search keywords count=%d models=%d", len(keywords), len(supported_models))
+        matches = search_listings(BAZOS_SEARCH_URL, keywords, supported_models=list(supported_models))
         logger.debug("raw matches found=%d", len(matches))
         for m in matches:
             # Apply strict price cap: require parseable price and value <= PRICE_CAP_EUR
