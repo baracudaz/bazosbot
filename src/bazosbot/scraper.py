@@ -29,7 +29,7 @@ def parse_price_to_eur(price_str: str) -> float | None:
         return None
     s = price_str.strip().lower()
     # extract number
-    num = re.sub(r"[^0-9,."]", "", s)
+    num = re.sub(r"[^0-9,.]", "", s)
     # replace commas with dots if looks like decimal
     num = num.replace(',', '.')
     try:
@@ -66,13 +66,30 @@ def fetch_rss_entries(url: str) -> List[Dict]:
         parsed = feedparser.parse(r.content)
         entries = []
         logger.debug("RSS feed parsed entries=%d", len(parsed.entries))
-        for e in parsed.entries:
+            for e in parsed.entries:
             title = (e.get("title") or "").strip()
             link = e.get("link") or e.get("id") or ""
             published = e.get("published") or e.get("updated") or None
             summary = (e.get("summary") or "").strip()
             price = extract_price(title + " " + summary)
             price_eur = parse_price_to_eur(price) if price else None
+
+            # If RSS didn't include price, try fetching the listing page to extract price
+            if price_eur is None and link:
+                try:
+                    logger.debug("RSS entry missing price, fetching page to extract: %s", link)
+                    page = requests.get(link, timeout=10)
+                    if page.status_code == 200 and page.text:
+                        p = extract_price(page.text)
+                        if p:
+                            pe = parse_price_to_eur(p)
+                            if pe is not None:
+                                price = p
+                                price_eur = pe
+                                logger.debug("extracted price from page=%s price_eur=%s", p, pe)
+                except Exception as ex:
+                    logger.debug("failed to fetch entry page for price extraction %s: %s", link, ex)
+
             logger.debug("entry title=%s link=%s price=%s price_eur=%s", title[:80], link, price, price_eur)
             entries.append({"title": title.lower(), "url": link, "published": published, "price": price, "price_eur": price_eur})
         return entries
