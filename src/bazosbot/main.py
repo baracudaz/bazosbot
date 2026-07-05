@@ -3,7 +3,7 @@
 Behavior:
 - Load ENV
 - Fetch postmarketOS-supported device list
-- Poll bazos category page and search for device keywords + supported models
+- Poll bazos category page (RSS preferred) and search for device keywords + supported models
 - Log matches to stdout and send Telegram message if configured
 """
 import os
@@ -24,7 +24,7 @@ DATA_DIR.mkdir(exist_ok=True)
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
-BAZOS_SEARCH_URL = os.getenv("BAZOS_SEARCH_URL", "https://www.bazos.sk/telefony/")
+BAZOS_SEARCH_URL = os.getenv("BAZOS_SEARCH_URL", "https://www.bazos.sk/rss.php?rub=mo&cat=451")
 TARGET_KEYWORDS = os.getenv("TARGET_KEYWORDS", "").split(",")
 CHECK_INTERVAL = int(os.getenv("CHECK_INTERVAL", "300"))
 
@@ -45,10 +45,8 @@ def save_seen(s):
 def build_search_keywords() -> list:
     # combine explicit keywords with postmarketOS-supported models
     pm = get_supported_models()
-    # pm contains titles like 'Xiaomi Mi 9T' — normalize to lower
     pm_keywords = [t.lower() for t in pm]
     kws = [k.strip().lower() for k in TARGET_KEYWORDS if k.strip()]
-    # include pm keywords that are short enough to match comfortably
     combined = kws + pm_keywords
     # dedupe and limit
     seen = set()
@@ -61,7 +59,12 @@ def build_search_keywords() -> list:
 
 
 def format_message(item):
-    return f"Found: {item.get('title')[:200]}\n{item.get('url')}"
+    parts = [f"Title: {item.get('title')}", f"URL: {item.get('url')}"]
+    if item.get('price'):
+        parts.append(f"Price: {item.get('price')}")
+    if item.get('published'):
+        parts.append(f"Published: {item.get('published')}")
+    return "\n".join(parts)
 
 
 def main_loop():
@@ -73,7 +76,10 @@ def main_loop():
             return
         matches = search_listings(BAZOS_SEARCH_URL, keywords)
         for m in matches:
-            uid = m.get('url') + '|' + (m.get('title') or '')
+            uid = m.get('url') or ''
+            if not uid:
+                # fallback to title-based UID
+                uid = (m.get('title') or '')[:200]
             if uid in seen:
                 continue
             seen.add(uid)
