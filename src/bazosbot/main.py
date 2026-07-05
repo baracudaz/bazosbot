@@ -15,6 +15,7 @@ from pathlib import Path
 from .postmarketos import get_supported_models
 from .scraper import search_listings
 from .notifier import send_telegram
+from .evaluator import evaluate_listing
 
 
 import logging
@@ -107,7 +108,20 @@ def main_loop():
                 logger.debug("skipping seen uid=%s", uid)
                 continue
             seen.add(uid)
-            msg = format_message(m)
+            # run evaluation
+            supported = get_supported_models()
+            eval_res = evaluate_listing({
+                'title': m.get('title'),
+                'url': m.get('url'),
+                'price': m.get('price'),
+                'price_eur': m.get('price_eur'),
+                'published': m.get('published'),
+            }, supported)
+            logger.info("Evaluation result: postmarketos=%s confidence=%.2f k3s=%s ai=%s", eval_res.get('postmarketos_support'), eval_res.get('support_confidence'), eval_res.get('k3s_suitability'), eval_res.get('ai_used'))
+            logger.debug("evaluation reasons=%s", eval_res.get('reasons'))
+
+            # attach evaluation to message
+            msg = format_message(m) + "\n\nEvaluation:\n" + "\n".join([f"- {r}" for r in eval_res.get('reasons', [])])
             logger.info("New match: %s", uid)
             logger.debug("message=\n%s", msg)
             if TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID:
