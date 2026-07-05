@@ -34,6 +34,8 @@ DATA_DIR.mkdir(exist_ok=True)
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 BAZOS_SEARCH_URL = os.getenv("BAZOS_SEARCH_URL", "https://www.bazos.sk/rss.php?rub=mo&cat=451")
+# support multiple search URLs via comma-separated env var; fall back to single BAZOS_SEARCH_URL
+BAZOS_SEARCH_URLS = [u.strip() for u in os.getenv("BAZOS_SEARCH_URLS", BAZOS_SEARCH_URL).split(",") if u.strip()]
 CHECK_INTERVAL = int(os.getenv("CHECK_INTERVAL", "300"))
 PRICE_CAP_EUR = float(os.getenv("PRICE_CAP_EUR", "50"))  # strict cap; entries without parseable price are excluded
 
@@ -84,10 +86,21 @@ def main_loop():
             return
         # also pass postmarketOS model list to scraper for matching
         supported_models = get_supported_models()
-        logger.debug("search keywords count=%d models=%d", len(keywords), len(supported_models))
-        matches = search_listings(BAZOS_SEARCH_URL, keywords, supported_models=list(supported_models))
-        logger.debug("raw matches found=%d", len(matches))
-        for m in matches:
+        logger.debug("search keywords count=%d models=%d urls=%d", len(keywords), len(supported_models), len(BAZOS_SEARCH_URLS))
+        all_matches = []
+        for url in BAZOS_SEARCH_URLS:
+            logger.debug("Searching URL: %s", url)
+            try:
+                matches = search_listings(url, keywords, supported_models=list(supported_models))
+            except Exception as ex:
+                logger.exception("search_listings failed for %s: %s", url, ex)
+                matches = []
+            for m in matches:
+                # annotate match with source URL
+                m['source_search_url'] = url
+            all_matches.extend(matches)
+        logger.debug("raw matches found=%d", len(all_matches))
+        for m in all_matches:
             # Apply strict price cap: require parseable price and value <= PRICE_CAP_EUR
             price_eur = m.get('price_eur')
             if price_eur is None:
