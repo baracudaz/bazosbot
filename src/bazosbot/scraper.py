@@ -13,7 +13,40 @@ import feedparser
 from bs4 import BeautifulSoup
 
 
-PRICE_RE = re.compile(r"(\d[\d\s,.]*\s*(?:€|eur|sk|kč|kc))", re.IGNORECASE)
+PRICE_RE = re.compile(r"(\d[\d\s,.]*\s*(?:€|eur|eur\.|sk|kč|kc))", re.IGNORECASE)
+
+# normalize price formats like "199 €", "1 999 Kč" into integer EUR when possible
+CURRENCY_MAP = {
+    '€': 'EUR', 'eur': 'EUR', 'eur.': 'EUR',
+    'sk': 'SK', 'kč': 'CZK', 'kc': 'CZK'
+}
+
+def parse_price_to_eur(price_str: str) -> float | None:
+    if not price_str:
+        return None
+    s = price_str.strip().lower()
+    # extract number
+    num = re.sub(r"[^0-9,."]", "", s)
+    # replace commas with dots if looks like decimal
+    num = num.replace(',', '.')
+    try:
+        val = float(num)
+    except Exception:
+        # try removing spaces
+        try:
+            val = float(num.replace(' ', ''))
+        except Exception:
+            return None
+    # determine currency by suffix
+    if 'k' in s and ('kč' in s or 'kc' in s):
+        # assume CZK -> convert approx 25 CZK per EUR
+        return round(val / 25.0, 2)
+    if 'sk' in s:
+        # old Slovak crowns — unknown; return None
+        return None
+    # default assume EUR
+    return round(val, 2)
+
 
 
 def fetch_rss_entries(url: str) -> List[Dict]:
@@ -29,7 +62,8 @@ def fetch_rss_entries(url: str) -> List[Dict]:
             published = e.get("published") or e.get("updated") or None
             summary = (e.get("summary") or "").strip()
             price = extract_price(title + " " + summary)
-            entries.append({"title": title.lower(), "url": link, "published": published, "price": price})
+            price_eur = parse_price_to_eur(price) if price else None
+            entries.append({"title": title.lower(), "url": link, "published": published, "price": price, "price_eur": price_eur})
         return entries
     except Exception:
         return []
@@ -83,7 +117,8 @@ def extract_listings_from_html(html: str, base_url: str) -> List[Dict]:
         if parent:
             text_blob = parent.get_text(separator=' ', strip=True)
             price = extract_price(text_blob)
-        listings.append({"title": title, "url": full, "price": price})
+        price_eur = parse_price_to_eur(price) if price else None
+        listings.append({"title": title, "url": full, "price": price, "price_eur": price_eur})
     return listings
 
 

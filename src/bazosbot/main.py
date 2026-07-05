@@ -27,6 +27,8 @@ TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 BAZOS_SEARCH_URL = os.getenv("BAZOS_SEARCH_URL", "https://www.bazos.sk/rss.php?rub=mo&cat=451")
 TARGET_KEYWORDS = os.getenv("TARGET_KEYWORDS", "").split(",")
 CHECK_INTERVAL = int(os.getenv("CHECK_INTERVAL", "300"))
+PRICE_CAP_EUR = float(os.getenv("PRICE_CAP_EUR", "50"))  # strict cap; entries without parseable price are excluded
+
 
 
 def load_seen():
@@ -76,6 +78,17 @@ def main_loop():
             return
         matches = search_listings(BAZOS_SEARCH_URL, keywords)
         for m in matches:
+            # Apply strict price cap: require parseable price and value <= PRICE_CAP_EUR
+            price_eur = m.get('price_eur')
+            if price_eur is None:
+                # skip items without price when using strict cap
+                continue
+            try:
+                if float(price_eur) > PRICE_CAP_EUR:
+                    continue
+            except Exception:
+                continue
+
             uid = m.get('url') or ''
             if not uid:
                 # fallback to title-based UID
