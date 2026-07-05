@@ -26,7 +26,7 @@ def parse_price_to_eur(price_str: str) -> float | None:
         return None
     s = price_str.strip().lower()
     # extract number
-    num = re.sub(r"[^0-9,."]", "", s)
+    num = re.sub(r"[^0-9,.]", "", s)
     # replace commas with dots if looks like decimal
     num = num.replace(',', '.')
     try:
