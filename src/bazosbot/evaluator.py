@@ -22,11 +22,37 @@ import re
 import json
 import requests
 import logging
+from pathlib import Path
+import time
 
 logger = logging.getLogger(__name__)
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 OPENAI_API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com")
+# Local AI server (LM Studio or similar). If set, will be tried when AI_PROVIDER=="local" or if OPENAI_API_KEY is absent.
+LOCAL_AI_URL = os.getenv("LOCAL_AI_URL")
+AI_PROVIDER = os.getenv("AI_PROVIDER", "auto").lower()  # auto|openai|local|none
+
+# cache evaluated listings to avoid repeated AI calls
+EVAL_CACHE_FILE = Path("data/eval_cache.json")
+CACHE_TTL = int(os.getenv("EVAL_CACHE_TTL", "86400"))  # seconds, default 1 day
+
+
+def _load_cache() -> Dict:
+    try:
+        if EVAL_CACHE_FILE.exists():
+            return json.loads(EVAL_CACHE_FILE.read_text())
+    except Exception:
+        return {}
+    return {}
+
+
+def _save_cache(cache: Dict):
+    try:
+        EVAL_CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
+        EVAL_CACHE_FILE.write_text(json.dumps(cache))
+    except Exception:
+        logger.debug("failed to write eval cache")
 
 
 def _heuristic_evaluate(listing: Dict, supported_models: Set[str]) -> Dict:
@@ -72,6 +98,38 @@ def _heuristic_evaluate(listing: Dict, supported_models: Set[str]) -> Dict:
     }
 
 
+def _call_local(prompt: str) -> str | None:
+    """Call a local LM Studio-like HTTP generation endpoint.
+
+    The endpoint is configurable via LOCAL_AI_URL. This function is defensive and
+    tries several common response shapes, returning raw text when found.
+    """
+    if not LOCAL_AI_URL:
+        return None
+    payload = {"prompt": prompt, "max_new_tokens": 300, "temperature": 0.0}
+    try:
+        r = requests.post(LOCAL_AI_URL, json=payload, timeout=30)
+        r.raise_for_status()
+        data = r.json()
+        # common keys: 'text', 'response', 'results'[0]['output_text']
+        if isinstance(data, dict):
+            if "text" in data and isinstance(data["text"], str):
+                return data["text"]
+            if "response" in data and isinstance(data["response"], str):
+                return data["response"]
+            if "results" in data and isinstance(data["results"], list) and data["results"]:
+                first = data["results"][0]
+                # try common nested keys
+                for k in ("output", "output_text", "text"):
+                    if k in first and isinstance(first[k], str):
+                        return first[k]
+        # fallback to raw text
+        return r.text
+    except Exception as ex:
+        logger.exception("Local AI call failed: %s", ex)
+        return None
+
+
 def _call_openai(prompt: str) -> str | None:
     if not OPENAI_API_KEY:
         return None
@@ -97,6 +155,27 @@ def _call_openai(prompt: str) -> str | None:
         return None
 
 
+def _call_ai(prompt: str) -> str | None:
+    """Provider-agnostic AI call. Tries provider according to AI_PROVIDER or availability."""
+    # explicit provider
+    if AI_PROVIDER == "none":
+        return None
+    if AI_PROVIDER == "local":
+        return _call_local(prompt)
+    if AI_PROVIDER == "openai":
+        return _call_openai(prompt)
+    # auto: prefer local if LOCAL_AI_URL set, otherwise OpenAI
+    if LOCAL_AI_URL:
+        resp = _call_local(prompt)
+        if resp:
+            return resp
+    if OPENAI_API_KEY:
+        resp = _call_openai(prompt)
+        if resp:
+            return resp
+    return None
+
+
 def _extract_json(text: str) -> Dict | None:
     if not text:
         return None
@@ -119,29 +198,40 @@ def evaluate_listing(listing: Dict, supported_models: Set[str]) -> Dict:
     # First run heuristic quickly
     h = _heuristic_evaluate(listing, supported_models)
 
-    # If AI key present, attempt to ask AI for a short JSON evaluation
-    if OPENAI_API_KEY:
+    # If AI provider configured, attempt to ask AI for a short JSON evaluation
+    # Check cache first
+    cache = _load_cache()
+    url = listing.get('url')
+    if url and url in cache:
+        entry = cache[url]
+        ts = entry.get('ts', 0)
+        if time.time() - ts < CACHE_TTL:
+            logger.debug("using cached evaluation for %s", url)
+            return entry.get('result')
+
+    if AI_PROVIDER != "none":
         prompt_lines = [
-            "Listing:\n",
-            f"Title: {listing.get('title')}",
-            f"URL: {listing.get('url')}",
-            f"Price: {listing.get('price')} ({listing.get('price_eur')})",
-            f"Summary: {listing.get('summary') or ''}\n",
-            "Known postmarketOS models (sample up to 20):",
+            "You are an assistant that evaluates mobile phone listings for postmarketOS compatibility and whether the device is suitable for running k3s in a low-cost cluster.\n",
+            "Return ONLY a single JSON object (no additional text) with the following schema:\n",
+            "{\n  \"postmarketos_support\": \"yes\" or \"no\",\n  \"support_confidence\": float between 0.0 and 1.0,\n  \"k3s_suitability\": \"yes\" or \"no\" or \"unknown\",\n  \"reasons\": [\"short reason strings\"]\n}\n",
+            "Evaluate the following listing. Be conservative: if unsure about support, answer postmarketos_support: \"no\" and support_confidence <= 0.5. Use k3s_suitability=\"yes\" only when price and basic suitability match.\n",
+            f"Listing Title: {listing.get('title')}",
+            f"Listing URL: {listing.get('url')}",
+            f"Price (raw): {listing.get('price')}",
+            f"Price (EUR): {listing.get('price_eur')}",
+            f"Summary: {listing.get('summary') or ''}",
+            "Known postmarketOS-supported model names (sample):",
         ]
-        sample = list(supported_models)[:20]
+        sample = list(supported_models)[:40]
         prompt_lines.append(", ".join(sample))
-        prompt_lines.append(
-            "\nReturn a JSON object with keys: postmarketos_support (yes/no), support_confidence(0-1), k3s_suitability (yes/no/unknown), reasons (array of short strings)."
-        )
         prompt = "\n".join(prompt_lines)
-        ai_raw = _call_openai(prompt)
+        ai_raw = _call_ai(prompt)
         parsed = _extract_json(ai_raw)
         if parsed:
             try:
                 post = parsed.get("postmarketos_support")
                 post_bool = True if str(post).lower() in ("yes", "true", "1") else False
-                return {
+                result = {
                     "postmarketos_support": post_bool,
                     "support_confidence": float(parsed.get("support_confidence", 0.5)),
                     "k3s_suitability": parsed.get("k3s_suitability", "unknown"),
@@ -149,8 +239,13 @@ def evaluate_listing(listing: Dict, supported_models: Set[str]) -> Dict:
                     "ai_used": True,
                     "ai_raw": ai_raw,
                 }
+                # cache result
+                if url:
+                    cache[url] = {"ts": int(time.time()), "result": result}
+                    _save_cache(cache)
+                return result
             except Exception:
                 logger.debug("failed to parse AI JSON, falling back to heuristic")
-                # fall through to heuristic
+
     # return heuristic result
     return h
