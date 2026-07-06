@@ -17,6 +17,13 @@ postmarketOS-supported devices and notifies via Telegram (alerts-only mode).
 3. Run:
    `python -m src.bazosbot.main`
 
+## Docker
+
+```bash
+docker build -t bazosbot:latest .
+docker run --env-file .env -v "$(pwd)/data:/app/data" --rm bazosbot:latest
+```
+
 ## Notes
 
 - postmarketOS device list is fetched from the postmarketOS wiki category "Devices".
