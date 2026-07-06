@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 from pathlib import Path
 
 from .postmarketos import get_supported_models
-from .scraper import search_listings
+from .scraper import search_listings, enrich_listing_price, strong_match
 from .notifier import send_telegram
 from .evaluator import evaluate_listing
 
@@ -54,10 +54,9 @@ def save_seen(s):
     SEEN_FILE.write_text(json.dumps(list(s)))
 
 
-def build_search_keywords() -> list:
+def build_search_keywords(supported_models: list[str]) -> list:
     # use postmarketOS-supported models as search keywords
-    pm = get_supported_models()
-    pm_keywords = [t.lower() for t in pm]
+    pm_keywords = [t.lower() for t in supported_models]
     # dedupe
     seen = set()
     out = []
@@ -68,24 +67,53 @@ def build_search_keywords() -> list:
     return out
 
 
-def format_message(item):
-    parts = [f"Title: {item.get('title')}", f"URL: {item.get('url')}"]
+def _bool_label(v) -> str:
+    return "yes" if bool(v) else "no"
+
+
+def _format_confidence(v) -> str:
+    try:
+        return f"{float(v):.2f}"
+    except Exception:
+        return "n/a"
+
+
+def format_message(item, eval_res):
+    parts = ["New listing match", "", f"Title: {item.get('title')}", f"URL: {item.get('url')}"]
     if item.get('price'):
         parts.append(f"Price: {item.get('price')}")
+    if item.get('price_eur') is not None:
+        parts.append(f"Price EUR: {item.get('price_eur')}")
     if item.get('published'):
         parts.append(f"Published: {item.get('published')}")
+    if item.get('source_search_url'):
+        parts.append(f"Source feed: {item.get('source_search_url')}")
+
+    parts.extend([
+        "",
+        "Evaluation",
+        f"postmarketOS support: {_bool_label(eval_res.get('postmarketos_support'))}",
+        f"support confidence: {_format_confidence(eval_res.get('support_confidence'))}",
+        f"k3s suitability: {eval_res.get('k3s_suitability', 'unknown')}",
+        f"evaluation source: {'AI' if eval_res.get('ai_used') else 'heuristic'}",
+    ])
+
+    reasons = eval_res.get('reasons') or []
+    if reasons:
+        parts.append("Reasons:")
+        parts.extend([f"- {r}" for r in reasons[:5]])
+
     return "\n".join(parts)
 
 
 def main_loop():
     seen = load_seen()
     while True:
-        keywords = build_search_keywords()
+        supported_models = get_supported_models()
+        keywords = build_search_keywords(list(supported_models))
         if not keywords:
             logger.info("No keywords configured; exiting.")
             return
-        # also pass postmarketOS model list to scraper for matching
-        supported_models = get_supported_models()
         logger.debug("search keywords count=%d models=%d urls=%d", len(keywords), len(supported_models), len(BAZOS_SEARCH_URLS))
         all_matches = []
         for url in BAZOS_SEARCH_URLS:
@@ -101,6 +129,9 @@ def main_loop():
             all_matches.extend(matches)
         logger.debug("raw matches found=%d", len(all_matches))
         for m in all_matches:
+            # Defer listing page fetch until after keyword/model match to reduce source queries.
+            enrich_listing_price(m)
+
             # Apply strict price cap: require parseable price and value <= PRICE_CAP_EUR
             price_eur = m.get('price_eur')
             if price_eur is None:
@@ -124,26 +155,23 @@ def main_loop():
             matched_by = m.get('matched_by')
             match_type = m.get('match_type')
             if match_type == 'keyword' and matched_by:
-                # use scraper strong_match
-                from .scraper import strong_match
                 if not strong_match(m.get('title') or '', matched_by):
                     logger.debug("rejected fuzzy-only match for uid=%s matched_by=%s title=%s", uid, matched_by, (m.get('title') or '')[:120])
                     continue
 
             # run evaluation
-            supported = get_supported_models()
             eval_res = evaluate_listing({
                 'title': m.get('title'),
                 'url': m.get('url'),
                 'price': m.get('price'),
                 'price_eur': m.get('price_eur'),
                 'published': m.get('published'),
-            }, supported)
+            }, supported_models)
             logger.info("Evaluation result: postmarketos=%s confidence=%.2f k3s=%s ai=%s", eval_res.get('postmarketos_support'), eval_res.get('support_confidence'), eval_res.get('k3s_suitability'), eval_res.get('ai_used'))
             logger.debug("evaluation reasons=%s", eval_res.get('reasons'))
 
             # attach evaluation to message
-            msg = format_message(m) + "\n\nEvaluation:\n" + "\n".join([f"- {r}" for r in eval_res.get('reasons', [])])
+            msg = format_message(m, eval_res)
             logger.info("New match: %s", uid)
             logger.debug("message=\n%s", msg)
             if TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID:

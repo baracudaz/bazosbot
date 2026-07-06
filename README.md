@@ -11,9 +11,7 @@ Quick start
 
 2. Copy .env.example to .env and set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID.
 
-3. Optional: set TARGET_KEYWORDS to comma-separated keywords to prioritize.
-
-4. Run:
+3. Run:
    python -m src.bazosbot.main
 
 Notes

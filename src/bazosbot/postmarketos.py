@@ -10,8 +10,6 @@ import logging
 import os
 
 logger = logging.getLogger(__name__)
-
-WIKI_API = "https://wiki.postmarketos.org/w/api.php"
 CACHE_FILE = Path("data/postmarketos_models.json")
 
 

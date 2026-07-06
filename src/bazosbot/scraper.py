@@ -88,12 +88,6 @@ def strong_match(text: str, key: str, ratio_token_thresh: float = 0.8) -> bool:
 
 PRICE_RE = re.compile(r"(\d[\d\s,.]*\s*(?:€|eur|eur\.|sk|kč|kc))", re.IGNORECASE)
 
-# normalize price formats like "199 €", "1 999 Kč" into integer EUR when possible
-CURRENCY_MAP = {
-    '€': 'EUR', 'eur': 'EUR', 'eur.': 'EUR',
-    'sk': 'SK', 'kč': 'CZK', 'kc': 'CZK'
-}
-
 def parse_price_to_eur(price_str: str) -> float | None:
     if not price_str:
         return None
@@ -129,7 +123,10 @@ def parse_price_to_eur(price_str: str) -> float | None:
 
 
 def fetch_rss_entries(url: str) -> List[Dict]:
-    """Fetch and parse RSS/Atom entries from a feed URL."""
+    """Fetch and parse RSS/Atom entries from a feed URL.
+
+    Keep this lightweight: do not fetch individual listing pages here.
+    """
     try:
         r = requests.get(url, timeout=15)
         r.raise_for_status()
@@ -143,22 +140,6 @@ def fetch_rss_entries(url: str) -> List[Dict]:
             summary = (e.get("summary") or "").strip()
             price = extract_price(title + " " + summary)
             price_eur = parse_price_to_eur(price) if price else None
-
-            # If RSS didn't include price, try fetching the listing page to extract price
-            if price_eur is None and link:
-                try:
-                    logger.debug("RSS entry missing price, fetching page to extract: %s", link)
-                    page = requests.get(link, timeout=10)
-                    if page.status_code == 200 and page.text:
-                        p = extract_price(page.text)
-                        if p:
-                            pe = parse_price_to_eur(p)
-                            if pe is not None:
-                                price = p
-                                price_eur = pe
-                                logger.debug("extracted price from page=%s price_eur=%s", p, pe)
-                except Exception as ex:
-                    logger.debug("failed to fetch entry page for price extraction %s: %s", link, ex)
 
             logger.debug("entry title=%s link=%s price=%s price_eur=%s", title[:80], link, price, price_eur)
             entries.append({"title": title.lower(), "url": link, "published": published, "price": price, "price_eur": price_eur})
@@ -183,6 +164,29 @@ def fetch_category_html(url: str) -> str:
     r = requests.get(url, timeout=15)
     r.raise_for_status()
     return r.text
+
+
+def enrich_listing_price(listing: Dict) -> Dict:
+    """Fill missing price for a single listing by fetching its details page."""
+    if listing.get("price_eur") is not None:
+        return listing
+    link = listing.get("url")
+    if not link:
+        return listing
+    try:
+        logger.debug("Listing missing price, fetching page to extract: %s", link)
+        page = requests.get(link, timeout=10)
+        if page.status_code == 200 and page.text:
+            p = extract_price(page.text)
+            if p:
+                pe = parse_price_to_eur(p)
+                if pe is not None:
+                    listing["price"] = p
+                    listing["price_eur"] = pe
+                    logger.debug("extracted price from page=%s price_eur=%s", p, pe)
+    except Exception as ex:
+        logger.debug("failed to fetch listing page for price extraction %s: %s", link, ex)
+    return listing
 
 
 def extract_listings_from_html(html: str, base_url: str) -> List[Dict]:
@@ -224,8 +228,6 @@ def extract_listings_from_html(html: str, base_url: str) -> List[Dict]:
 
 
 def search_listings(category_url: str, keywords: List[str], supported_models: List[str] | None = None) -> List[Dict]:
-    """Return listings ...
-    """
     """Return listings from either RSS or HTML that match any keyword or supported model.
 
     Matching is done case-insensitively and with fuzzy matching for typos. `supported_models`
