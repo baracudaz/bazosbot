@@ -51,7 +51,8 @@ def load_seen():
 
 
 def save_seen(s):
-    SEEN_FILE.write_text(json.dumps(list(s)))
+    # Sort and pretty-print for stable, human-readable state on disk.
+    SEEN_FILE.write_text(json.dumps(sorted(s), indent=2, ensure_ascii=False) + "\n")
 
 
 def build_search_keywords(supported_models: list[str]) -> list:
@@ -179,11 +180,13 @@ def main_loop():
                 logger.info("telegram send status=%s", ok)
                 if ok:
                     seen.add(uid)
+                    save_seen(seen)
                 else:
                     logger.warning("not marking uid=%s as seen because telegram send failed", uid)
             else:
                 # no telegram configured — still mark as seen to avoid reprocessing
                 seen.add(uid)
+                save_seen(seen)
         save_seen(seen)
         time.sleep(CHECK_INTERVAL)
 
