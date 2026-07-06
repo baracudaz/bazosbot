@@ -1,0 +1,11 @@
+services:
+  bazosbot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bazosbot
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped

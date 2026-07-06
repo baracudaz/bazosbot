@@ -24,6 +24,13 @@ docker build -t bazosbot:latest .
 docker run --env-file .env -v "$(pwd)/data:/app/data" --rm bazosbot:latest
 ```
 
+Or use Docker Compose:
+
+```bash
+docker compose up --build -d
+docker compose logs -f
+```
+
 ## Notes
 
 - postmarketOS device list is fetched from the postmarketOS wiki category "Devices".
