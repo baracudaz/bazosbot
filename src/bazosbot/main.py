@@ -23,8 +23,19 @@ import logging
 load_dotenv()
 
 # logging config
-LOG_LEVEL = os.getenv('DEBUG', '').lower() in ('1', 'true', 'yes') and logging.DEBUG or logging.INFO
-logging.basicConfig(level=LOG_LEVEL, format='%(asctime)s %(levelname)s [%(module)s:%(funcName)s] %(message)s')
+def _resolve_log_level() -> int:
+    configured = os.getenv("LOG_LEVEL", "").strip().upper()
+    if configured:
+        level = getattr(logging, configured, None)
+        if isinstance(level, int):
+            return level
+    # Backward compatibility for older DEBUG=true style config.
+    if os.getenv("DEBUG", "").lower() in ("1", "true", "yes"):
+        return logging.DEBUG
+    return logging.INFO
+
+
+logging.basicConfig(level=_resolve_log_level(), format='%(asctime)s %(levelname)s [%(module)s:%(funcName)s] %(message)s')
 logger = logging.getLogger(__name__)
 
 DATA_DIR = Path("data")
@@ -45,14 +56,18 @@ def load_seen():
     if SEEN_FILE.exists():
         try:
             return set(json.loads(SEEN_FILE.read_text()))
-        except Exception:
+        except Exception as ex:
+            logger.warning("failed to parse seen file %s: %s", SEEN_FILE, ex)
             return set()
     return set()
 
 
 def save_seen(s):
     # Sort and pretty-print for stable, human-readable state on disk.
-    SEEN_FILE.write_text(json.dumps(sorted(s), indent=2, ensure_ascii=False) + "\n")
+    try:
+        SEEN_FILE.write_text(json.dumps(sorted(s), indent=2, ensure_ascii=False) + "\n")
+    except Exception as ex:
+        logger.error("failed to persist seen file %s: %s", SEEN_FILE, ex)
 
 
 def build_search_keywords(supported_models: list[str]) -> list:
@@ -110,25 +125,30 @@ def format_message(item, eval_res):
 def main_loop():
     seen = load_seen()
     while True:
+        cycle_start = time.time()
         supported_models = get_supported_models()
         keywords = build_search_keywords(list(supported_models))
         if not keywords:
-            logger.info("No keywords configured; exiting.")
+            logger.warning("No keywords configured; exiting.")
             return
-        logger.debug("search keywords count=%d models=%d urls=%d", len(keywords), len(supported_models), len(BAZOS_SEARCH_URLS))
+        logger.info("Starting scan cycle: keywords=%d models=%d urls=%d seen=%d", len(keywords), len(supported_models), len(BAZOS_SEARCH_URLS), len(seen))
         all_matches = []
+        scan_failures = 0
         for url in BAZOS_SEARCH_URLS:
             logger.debug("Searching URL: %s", url)
             try:
                 matches = search_listings(url, keywords, supported_models=list(supported_models))
             except Exception as ex:
-                logger.exception("search_listings failed for %s: %s", url, ex)
+                logger.warning("search_listings failed for %s: %s", url, ex)
                 matches = []
+                scan_failures += 1
             for m in matches:
                 # annotate match with source URL
                 m['source_search_url'] = url
             all_matches.extend(matches)
-        logger.debug("raw matches found=%d", len(all_matches))
+        logger.info("Scan results: raw_matches=%d feed_failures=%d", len(all_matches), scan_failures)
+        new_seen_count = 0
+        filtered_out_count = 0
         for m in all_matches:
             # Defer listing page fetch until after keyword/model match to reduce source queries.
             enrich_listing_price(m)
@@ -137,11 +157,14 @@ def main_loop():
             price_eur = m.get('price_eur')
             if price_eur is None:
                 # skip items without price when using strict cap
+                filtered_out_count += 1
                 continue
             try:
                 if float(price_eur) > PRICE_CAP_EUR:
+                    filtered_out_count += 1
                     continue
             except Exception:
+                filtered_out_count += 1
                 continue
 
             uid = m.get('url') or ''
@@ -150,6 +173,7 @@ def main_loop():
                 uid = (m.get('title') or '')[:200]
             if uid in seen:
                 logger.debug("skipping seen uid=%s", uid)
+                filtered_out_count += 1
                 continue
 
             # additional confirmation: require strong match for keyword matches to avoid false positives
@@ -158,6 +182,7 @@ def main_loop():
             if match_type == 'keyword' and matched_by:
                 if not strong_match(m.get('title') or '', matched_by):
                     logger.debug("rejected fuzzy-only match for uid=%s matched_by=%s title=%s", uid, matched_by, (m.get('title') or '')[:120])
+                    filtered_out_count += 1
                     continue
 
             # run evaluation
@@ -168,7 +193,7 @@ def main_loop():
                 'price_eur': m.get('price_eur'),
                 'published': m.get('published'),
             }, supported_models)
-            logger.info("Evaluation result: postmarketos=%s confidence=%.2f k3s=%s ai=%s", eval_res.get('postmarketos_support'), eval_res.get('support_confidence'), eval_res.get('k3s_suitability'), eval_res.get('ai_used'))
+            logger.debug("evaluation result: postmarketos=%s confidence=%.2f k3s=%s ai=%s", eval_res.get('postmarketos_support'), eval_res.get('support_confidence'), eval_res.get('k3s_suitability'), eval_res.get('ai_used'))
             logger.debug("evaluation reasons=%s", eval_res.get('reasons'))
 
             # attach evaluation to message
@@ -177,17 +202,26 @@ def main_loop():
             logger.debug("message=\n%s", msg)
             if TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID:
                 ok = send_telegram(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, msg)
-                logger.info("telegram send status=%s", ok)
+                logger.debug("telegram send status=%s", ok)
                 if ok:
                     seen.add(uid)
                     save_seen(seen)
+                    new_seen_count += 1
                 else:
                     logger.warning("not marking uid=%s as seen because telegram send failed", uid)
             else:
                 # no telegram configured — still mark as seen to avoid reprocessing
                 seen.add(uid)
                 save_seen(seen)
+                new_seen_count += 1
         save_seen(seen)
+        logger.info(
+            "Cycle done: new_seen=%d filtered=%d total_seen=%d duration_sec=%.2f",
+            new_seen_count,
+            filtered_out_count,
+            len(seen),
+            time.time() - cycle_start,
+        )
         time.sleep(CHECK_INTERVAL)
 
 

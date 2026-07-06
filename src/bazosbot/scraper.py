@@ -145,7 +145,7 @@ def fetch_rss_entries(url: str) -> List[Dict]:
             entries.append({"title": title.lower(), "url": link, "published": published, "price": price, "price_eur": price_eur})
         return entries
     except Exception as ex:
-        logger.exception("failed to fetch or parse RSS %s: %s", url, ex)
+        logger.warning("failed to fetch or parse RSS %s: %s", url, ex)
         return []
 
 

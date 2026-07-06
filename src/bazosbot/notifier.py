@@ -8,7 +8,7 @@ TELEGRAM_API = "https://api.telegram.org/bot{token}/sendMessage"
 
 def send_telegram(token: str, chat_id: str, text: str) -> bool:
     if not token or not chat_id:
-        logger.debug("send_telegram called without token/chat_id")
+        logger.warning("send_telegram called without token/chat_id")
         return False
     url = TELEGRAM_API.format(token=token)
     payload = {"chat_id": chat_id, "text": text}
@@ -20,5 +20,5 @@ def send_telegram(token: str, chat_id: str, text: str) -> bool:
             logger.warning("telegram send failed status=%s text=%s", r.status_code, r.text[:300])
         return ok
     except Exception as ex:
-        logger.exception("telegram send exception: %s", ex)
+        logger.error("telegram send exception: %s", ex)
         return False

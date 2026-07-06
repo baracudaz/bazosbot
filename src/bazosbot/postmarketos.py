@@ -33,7 +33,7 @@ def get_supported_models() -> Set[str]:
                     lines = [line.strip() for line in txt.splitlines() if line.strip()]
                     return {line.lower() for line in lines}
         except Exception:
-            logger.debug("failed to load POSTMARKETOS_MODELS_FILE")
+            logger.warning("failed to load POSTMARKETOS_MODELS_FILE=%s", env_path)
 
     # fallback to cached file if present
     try:
@@ -41,7 +41,7 @@ def get_supported_models() -> Set[str]:
             data = json.loads(CACHE_FILE.read_text())
             return {t.lower() for t in data}
     except Exception:
-        logger.debug("failed to read postmarketos cache")
+        logger.warning("failed to read postmarketos cache file=%s", CACHE_FILE)
 
     # nothing available
     logger.debug("POSTMARKETOS_MODELS_FILE not provided or unreadable; returning empty set")
