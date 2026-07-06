@@ -9,6 +9,7 @@ Behavior:
 import os
 import time
 import json
+import re
 from dotenv import load_dotenv
 from pathlib import Path
 
@@ -95,29 +96,31 @@ def _format_confidence(v) -> str:
 
 
 def format_message(item, eval_res):
-    parts = ["New listing match", "", f"Title: {item.get('title')}", f"URL: {item.get('url')}"]
-    if item.get('price'):
-        parts.append(f"Price: {item.get('price')}")
-    if item.get('price_eur') is not None:
-        parts.append(f"Price EUR: {item.get('price_eur')}")
-    if item.get('published'):
-        parts.append(f"Published: {item.get('published')}")
-    if item.get('source_search_url'):
-        parts.append(f"Source feed: {item.get('source_search_url')}")
+    title = (item.get("title") or "").strip()
+    # Some feed titles include trailing price (e.g. "model xyz: 30").
+    # Keep the model line clean and show price only in the dedicated Price field.
+    title = re.sub(r":\s*\d[\d\s.,]*\s*(?:€|eur|eur\.)?\s*$", "", title, flags=re.IGNORECASE).strip()
+    url = (item.get("url") or "").strip()
+    price = item.get("price")
+    if not price and item.get("price_eur") is not None:
+        price = f"{item.get('price_eur')} EUR"
 
+    parts = [
+        "New listing match",
+        f"Model: {title}",
+    ]
+    if price:
+        parts.append(f"Price: {price}")
     parts.extend([
-        "",
-        "Evaluation",
         f"postmarketOS support: {_bool_label(eval_res.get('postmarketos_support'))}",
-        f"support confidence: {_format_confidence(eval_res.get('support_confidence'))}",
-        f"k3s suitability: {eval_res.get('k3s_suitability', 'unknown')}",
-        f"evaluation source: {'AI' if eval_res.get('ai_used') else 'heuristic'}",
+        f"cluster suitability (k3s): {eval_res.get('k3s_suitability', 'unknown')}",
     ])
 
-    reasons = eval_res.get('reasons') or []
+    reasons = [r for r in (eval_res.get("reasons") or []) if r]
     if reasons:
-        parts.append("Reasons:")
-        parts.extend([f"- {r}" for r in reasons[:5]])
+        parts.append(f"Why: {'; '.join(reasons[:2])}")
+    if url:
+        parts.append(f"URL: {url}")
 
     return "\n".join(parts)
 
