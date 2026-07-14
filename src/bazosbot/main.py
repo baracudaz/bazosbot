@@ -45,9 +45,13 @@ DATA_DIR.mkdir(exist_ok=True)
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
-BAZOS_SEARCH_URL = os.getenv("BAZOS_SEARCH_URL", "https://www.bazos.sk/rss.php?rub=mo&cat=451")
-# support multiple search URLs via comma-separated env var; fall back to single BAZOS_SEARCH_URL
-BAZOS_SEARCH_URLS = [u.strip() for u in os.getenv("BAZOS_SEARCH_URLS", BAZOS_SEARCH_URL).split(",") if u.strip()]
+DEFAULT_BAZOS_SEARCH_URLS = [
+    "https://www.bazos.sk/rss.php?rub=mo&cat=451",
+    "https://www.bazos.cz/rss.php?rub=mo&cat=455",
+]
+# support multiple search URLs via comma-separated env var; fall back to the legacy single URL env var
+_search_urls_value = os.getenv("BAZOS_SEARCH_URLS") or os.getenv("BAZOS_SEARCH_URL") or ",".join(DEFAULT_BAZOS_SEARCH_URLS)
+BAZOS_SEARCH_URLS = [u.strip() for u in _search_urls_value.split(",") if u.strip()]
 CHECK_INTERVAL = int(os.getenv("CHECK_INTERVAL", "300"))
 PRICE_CAP_EUR = float(os.getenv("PRICE_CAP_EUR", "50"))  # strict cap; entries without parseable price are excluded
 
@@ -95,15 +99,30 @@ def _format_confidence(v) -> str:
         return "n/a"
 
 
+def _is_czk_price(price: str | None) -> bool:
+    if not price:
+        return False
+    s = price.lower()
+    return "czk" in s or "kč" in s or re.search(r"\bkc\b", s) is not None
+
+
+def _format_price(price: str | None, price_eur) -> str | None:
+    if price and _is_czk_price(price) and price_eur is not None:
+        return f"{float(price_eur):.2f} EUR (from {price})"
+    if price:
+        return price
+    if price_eur is not None:
+        return f"{float(price_eur):.2f} EUR"
+    return None
+
+
 def format_message(item, eval_res):
     title = (item.get("title") or "").strip()
     # Some feed titles include trailing price (e.g. "model xyz: 30").
     # Keep the model line clean and show price only in the dedicated Price field.
-    title = re.sub(r":\s*\d[\d\s.,]*\s*(?:€|eur|eur\.)?\s*$", "", title, flags=re.IGNORECASE).strip()
+    title = re.sub(r":\s*\d[\d\s.,]*\s*(?:€|eur|eur\.|czk|kč|kc)?\s*$", "", title, flags=re.IGNORECASE).strip()
     url = (item.get("url") or "").strip()
-    price = item.get("price")
-    if not price and item.get("price_eur") is not None:
-        price = f"{item.get('price_eur')} EUR"
+    price = _format_price(item.get("price"), item.get("price_eur"))
 
     parts = [
         "New listing match",

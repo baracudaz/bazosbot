@@ -86,32 +86,54 @@ def strong_match(text: str, key: str, ratio_token_thresh: float = 0.8) -> bool:
     return True
 
 
-PRICE_RE = re.compile(r"(\d[\d\s,.]*\s*(?:€|eur|eur\.|sk|kč|kc))", re.IGNORECASE)
+PRICE_RE = re.compile(r"(\d[\d\s,.]*\s*(?:€|eur|eur\.|sk|kč|kc|czk))", re.IGNORECASE)
+
+
+def _parse_price_number(price_str: str) -> float | None:
+    cleaned = re.sub(r"[^0-9,./\s]", "", price_str).replace("/", "").strip()
+    compact = re.sub(r"\s+", "", cleaned)
+    if not compact:
+        return None
+
+    if "," in compact and "." in compact:
+        if compact.rfind(",") > compact.rfind("."):
+            normalized = compact.replace(".", "").replace(",", ".")
+        else:
+            normalized = compact.replace(",", "")
+    elif compact.count(",") > 1:
+        normalized = compact.replace(",", "")
+    elif compact.count(".") > 1:
+        normalized = compact.replace(".", "")
+    elif "," in compact:
+        whole, fractional = compact.split(",", 1)
+        normalized = compact.replace(",", "") if len(fractional) == 3 else f"{whole}.{fractional}"
+    elif "." in compact:
+        whole, fractional = compact.split(".", 1)
+        normalized = compact.replace(".", "") if len(fractional) == 3 else compact
+    else:
+        normalized = compact
+
+    try:
+        return float(normalized)
+    except ValueError:
+        logger.debug("parse_price_to_eur failed to parse numeric from %s", price_str)
+        return None
+
 
 def parse_price_to_eur(price_str: str) -> float | None:
     if not price_str:
         return None
     s = price_str.strip().lower()
-    # extract number
-    num = re.sub(r"[^0-9,.]", "", s)
-    # replace commas with dots if looks like decimal
-    num = num.replace(',', '.')
-    try:
-        val = float(num)
-    except Exception:
-        # try removing spaces
-        try:
-            val = float(num.replace(' ', ''))
-        except Exception:
-            logger.debug("parse_price_to_eur failed to parse numeric from %s", price_str)
-            return None
+    val = _parse_price_number(s)
+    if val is None:
+        return None
     # determine currency by suffix
-    if 'k' in s and ('kč' in s or 'kc' in s):
+    if "czk" in s or "kč" in s or re.search(r"\bkc\b", s):
         # assume CZK -> convert approx 25 CZK per EUR
         eur = round(val / 25.0, 2)
         logger.debug("parsed price %s as %s EUR (assumed CZK)", price_str, eur)
         return eur
-    if 'sk' in s:
+    if "sk" in s:
         # old Slovak crowns — unknown; return None
         logger.debug("parse_price_to_eur encountered SK currency for %s", price_str)
         return None
