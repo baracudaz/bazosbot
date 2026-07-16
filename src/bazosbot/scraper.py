@@ -4,6 +4,7 @@ If the provided category URL points to an RSS feed (contains 'rss' or ends with 
 parse the feed. Otherwise, fall back to heuristic HTML parsing but resolve relative links to absolute
 and attempt to extract price and published date when available.
 """
+
 from typing import List, Dict
 import re
 from urllib.parse import urljoin
@@ -17,7 +18,9 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def fuzzy_contains(text: str, key: str, ratio_thresh: float = 0.7, token_thresh: float = 0.6) -> bool:
+def fuzzy_contains(
+    text: str, key: str, ratio_thresh: float = 0.7, token_thresh: float = 0.6
+) -> bool:
     """Return True if `key` is approximately contained in `text`.
 
     Heuristics used (in order):
@@ -66,7 +69,11 @@ def strong_match(text: str, key: str, ratio_token_thresh: float = 0.8) -> bool:
     # quick exact containment
     if k in t:
         return True
-    ktoks = [tok for tok in re.findall(r"\w+", k) if (any(c.isdigit() for c in tok) or len(tok) > 2)]
+    ktoks = [
+        tok
+        for tok in re.findall(r"\w+", k)
+        if (any(c.isdigit() for c in tok) or len(tok) > 2)
+    ]
     if not ktoks:
         return False
     for tok in ktoks:
@@ -106,7 +113,11 @@ def _parse_price_number(price_str: str) -> float | None:
         normalized = compact.replace(".", "")
     elif "," in compact:
         whole, fractional = compact.split(",", 1)
-        normalized = compact.replace(",", "") if len(fractional) == 3 else f"{whole}.{fractional}"
+        normalized = (
+            compact.replace(",", "")
+            if len(fractional) == 3
+            else f"{whole}.{fractional}"
+        )
     elif "." in compact:
         whole, fractional = compact.split(".", 1)
         normalized = compact.replace(".", "") if len(fractional) == 3 else compact
@@ -123,9 +134,7 @@ def _parse_price_number(price_str: str) -> float | None:
 def _contains_czk_currency(s: str) -> bool:
     lowered = s.lower()
     return (
-        "czk" in lowered
-        or "kč" in lowered
-        or re.search(r"\bkc\b", lowered) is not None
+        "czk" in lowered or "kč" in lowered or re.search(r"\bkc\b", lowered) is not None
     )
 
 
@@ -152,7 +161,6 @@ def parse_price_to_eur(price_str: str) -> float | None:
     return eur
 
 
-
 def fetch_rss_entries(url: str) -> List[Dict]:
     """Fetch and parse RSS/Atom entries from a feed URL.
 
@@ -172,8 +180,22 @@ def fetch_rss_entries(url: str) -> List[Dict]:
             price = extract_price(title + " " + summary)
             price_eur = parse_price_to_eur(price) if price else None
 
-            logger.debug("entry title=%s link=%s price=%s price_eur=%s", title[:80], link, price, price_eur)
-            entries.append({"title": title.lower(), "url": link, "published": published, "price": price, "price_eur": price_eur})
+            logger.debug(
+                "entry title=%s link=%s price=%s price_eur=%s",
+                title[:80],
+                link,
+                price,
+                price_eur,
+            )
+            entries.append(
+                {
+                    "title": title.lower(),
+                    "url": link,
+                    "published": published,
+                    "price": price,
+                    "price_eur": price_eur,
+                }
+            )
         return entries
     except Exception as ex:
         logger.warning("failed to fetch or parse RSS %s: %s", url, ex)
@@ -186,7 +208,7 @@ def extract_price(text: str):
     m = PRICE_RE.search(text)
     if m:
         found = m.group(1).strip()
-        logger.debug("extract_price found=%s in text=%s", found, (text or '')[:120])
+        logger.debug("extract_price found=%s in text=%s", found, (text or "")[:120])
         return found
     return None
 
@@ -216,7 +238,9 @@ def enrich_listing_price(listing: Dict) -> Dict:
                     listing["price_eur"] = pe
                     logger.debug("extracted price from page=%s price_eur=%s", p, pe)
     except Exception as ex:
-        logger.debug("failed to fetch listing page for price extraction %s: %s", link, ex)
+        logger.debug(
+            "failed to fetch listing page for price extraction %s: %s", link, ex
+        )
     return listing
 
 
@@ -226,21 +250,21 @@ def extract_listings_from_html(html: str, base_url: str) -> List[Dict]:
     # Try common bazos patterns first
     # Many bazos pages use links inside <a class="inzerat"> or article/listing blocks
     anchors = []
-    anchors.extend(soup.find_all('a', class_=lambda v: v and 'inzerat' in v))
-    anchors.extend(soup.find_all('a', href=True))
+    anchors.extend(soup.find_all("a", class_=lambda v: v and "inzerat" in v))
+    anchors.extend(soup.find_all("a", href=True))
 
     seen = set()
     for a in anchors:
-        href = a.get('href')
+        href = a.get("href")
         if not href:
             continue
         full = urljoin(base_url, href)
-        title = (a.get_text(separator=' ', strip=True) or '').lower()
+        title = (a.get_text(separator=" ", strip=True) or "").lower()
         if not title:
             # maybe link contains img with alt
-            img = a.find('img')
-            if img and img.get('alt'):
-                title = img.get('alt').strip().lower()
+            img = a.find("img")
+            if img and img.get("alt"):
+                title = img.get("alt").strip().lower()
         if not title:
             continue
         if full in seen:
@@ -251,14 +275,18 @@ def extract_listings_from_html(html: str, base_url: str) -> List[Dict]:
         # look for sibling nodes that may contain price
         parent = a.parent
         if parent:
-            text_blob = parent.get_text(separator=' ', strip=True)
+            text_blob = parent.get_text(separator=" ", strip=True)
             price = extract_price(text_blob)
         price_eur = parse_price_to_eur(price) if price else None
-        listings.append({"title": title, "url": full, "price": price, "price_eur": price_eur})
+        listings.append(
+            {"title": title, "url": full, "price": price, "price_eur": price_eur}
+        )
     return listings
 
 
-def search_listings(category_url: str, keywords: List[str], supported_models: List[str] | None = None) -> List[Dict]:
+def search_listings(
+    category_url: str, keywords: List[str], supported_models: List[str] | None = None
+) -> List[Dict]:
     """Return listings from either RSS or HTML that match any keyword or supported model.
 
     Matching is done case-insensitively and with fuzzy matching for typos. `supported_models`
@@ -270,20 +298,28 @@ def search_listings(category_url: str, keywords: List[str], supported_models: Li
     models = [m.lower() for m in (supported_models or []) if m]
     results = []
     # detect RSS-like URL
-    if 'rss' in category_url or category_url.endswith('.xml') or 'rss.php' in category_url:
+    if (
+        "rss" in category_url
+        or category_url.endswith(".xml")
+        or "rss.php" in category_url
+    ):
         entries = fetch_rss_entries(category_url)
         for e in entries:
-            title = e.get('title', '') or ''
-            url = e.get('link', '') or e.get('url', '') or ''
+            title = e.get("title", "") or ""
+            url = e.get("link", "") or e.get("url", "") or ""
             searchable = f"{title} {url}".strip()
             matched = False
             # check keywords
             if keys:
                 for k in keys:
                     if fuzzy_contains(searchable, k):
-                        logger.debug("fuzzy matched entry title/url=%s keyword=%s", searchable[:120], k)
-                        e['matched_by'] = k
-                        e['match_type'] = 'keyword'
+                        logger.debug(
+                            "fuzzy matched entry title/url=%s keyword=%s",
+                            searchable[:120],
+                            k,
+                        )
+                        e["matched_by"] = k
+                        e["match_type"] = "keyword"
                         results.append(e)
                         matched = True
                         break
@@ -293,9 +329,13 @@ def search_listings(category_url: str, keywords: List[str], supported_models: Li
             if models:
                 for m in models:
                     if fuzzy_contains(searchable, m):
-                        logger.debug("fuzzy matched entry title/url=%s model=%s", searchable[:120], m[:60])
-                        e['matched_by'] = m
-                        e['match_type'] = 'model'
+                        logger.debug(
+                            "fuzzy matched entry title/url=%s model=%s",
+                            searchable[:120],
+                            m[:60],
+                        )
+                        e["matched_by"] = m
+                        e["match_type"] = "model"
                         results.append(e)
                         matched = True
                         break
@@ -309,16 +349,20 @@ def search_listings(category_url: str, keywords: List[str], supported_models: Li
     html = fetch_category_html(category_url)
     items = extract_listings_from_html(html, category_url)
     for it in items:
-        title = it.get('title', '') or ''
-        url = it.get('url', '') or ''
+        title = it.get("title", "") or ""
+        url = it.get("url", "") or ""
         searchable = f"{title} {url}".strip()
         matched = False
         if keys:
             for k in keys:
                 if fuzzy_contains(searchable, k):
-                    logger.debug("fuzzy matched html entry title/url=%s keyword=%s", searchable[:120], k)
-                    it['matched_by'] = k
-                    it['match_type'] = 'keyword'
+                    logger.debug(
+                        "fuzzy matched html entry title/url=%s keyword=%s",
+                        searchable[:120],
+                        k,
+                    )
+                    it["matched_by"] = k
+                    it["match_type"] = "keyword"
                     results.append(it)
                     matched = True
                     break
@@ -327,9 +371,13 @@ def search_listings(category_url: str, keywords: List[str], supported_models: Li
         if models:
             for m in models:
                 if fuzzy_contains(searchable, m):
-                    logger.debug("fuzzy matched html entry title/url=%s model=%s", searchable[:120], m[:60])
-                    it['matched_by'] = m
-                    it['match_type'] = 'model'
+                    logger.debug(
+                        "fuzzy matched html entry title/url=%s model=%s",
+                        searchable[:120],
+                        m[:60],
+                    )
+                    it["matched_by"] = m
+                    it["match_type"] = "model"
                     results.append(it)
                     matched = True
                     break

@@ -3,6 +3,7 @@
 This module intentionally uses heuristic-only evaluation based on fuzzy model
 matching and price checks.
 """
+
 from typing import Dict, Set
 import re
 import difflib
@@ -11,12 +12,19 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-def _heuristic_evaluate(listing: Dict, supported_models: Set[str], min_price_eur: float | None = None, max_price_eur: float | None = None) -> Dict:
+def _heuristic_evaluate(
+    listing: Dict,
+    supported_models: Set[str],
+    min_price_eur: float | None = None,
+    max_price_eur: float | None = None,
+) -> Dict:
     title = (listing.get("title") or "").lower()
     summary = (listing.get("summary") or "").lower()
     reasons = []
 
-    def _token_fuzzy_match(haystack: str, needle: str, token_ratio_thresh: float = 0.8) -> bool:
+    def _token_fuzzy_match(
+        haystack: str, needle: str, token_ratio_thresh: float = 0.8
+    ) -> bool:
         """Return True when each significant needle token is present approximately in haystack."""
         h_tokens = re.findall(r"\w+", haystack.lower())
         n_tokens = re.findall(r"\w+", needle.lower())
@@ -33,7 +41,10 @@ def _heuristic_evaluate(listing: Dict, supported_models: Set[str], min_price_eur
                 continue
             if tok in h_tokens:
                 continue
-            if not any(difflib.SequenceMatcher(None, tok, h).ratio() >= token_ratio_thresh for h in h_tokens):
+            if not any(
+                difflib.SequenceMatcher(None, tok, h).ratio() >= token_ratio_thresh
+                for h in h_tokens
+            ):
                 return False
         return True
 
@@ -85,6 +96,17 @@ def _heuristic_evaluate(listing: Dict, supported_models: Set[str], min_price_eur
         "ai_used": False,
     }
 
-def evaluate_listing(listing: Dict, supported_models: Set[str], min_price_eur: float | None = None, max_price_eur: float | None = None) -> Dict:
+
+def evaluate_listing(
+    listing: Dict,
+    supported_models: Set[str],
+    min_price_eur: float | None = None,
+    max_price_eur: float | None = None,
+) -> Dict:
     """Evaluate a listing using heuristic fuzzy matching only."""
-    return _heuristic_evaluate(listing, supported_models, min_price_eur=min_price_eur, max_price_eur=max_price_eur)
+    return _heuristic_evaluate(
+        listing,
+        supported_models,
+        min_price_eur=min_price_eur,
+        max_price_eur=max_price_eur,
+    )

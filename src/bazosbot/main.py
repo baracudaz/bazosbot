@@ -180,28 +180,30 @@ def main_loop():
             # Defer listing page fetch until after keyword/model match to reduce source queries.
             enrich_listing_price(m)
 
+            uid = m.get('url') or '' or (m.get('title') or '')[:200]
+
             # Apply strict price bounds: require parseable price and MIN_PRICE_EUR <= value <= MAX_PRICE_EUR
             price_eur = m.get('price_eur')
             if price_eur is None:
+                logger.debug("filtering out match '%s': no parseable price (original raw price: %s)", uid, m.get('price'))
                 # skip items without price when using strict bounds
                 filtered_out_count += 1
                 continue
             try:
                 price_eur_value = float(price_eur)
                 if price_eur_value < MIN_PRICE_EUR:
+                    logger.debug("filtering out match '%s': price %.2f EUR is below MIN_PRICE_EUR (%s)", uid, price_eur_value, MIN_PRICE_EUR)
                     filtered_out_count += 1
                     continue
                 if price_eur_value > MAX_PRICE_EUR:
+                    logger.debug("filtering out match '%s': price %.2f EUR is above MAX_PRICE_EUR (%s)", uid, price_eur_value, MAX_PRICE_EUR)
                     filtered_out_count += 1
                     continue
-            except Exception:
+            except Exception as ex:
+                logger.debug("filtering out match '%s': error parsing price value '%s': %s", uid, price_eur, ex)
                 filtered_out_count += 1
                 continue
 
-            uid = m.get('url') or ''
-            if not uid:
-                # fallback to title-based UID
-                uid = (m.get('title') or '')[:200]
             if uid in seen:
                 logger.debug("skipping seen uid=%s", uid)
                 filtered_out_count += 1
@@ -210,11 +212,11 @@ def main_loop():
             # additional confirmation: require strong match for keyword matches to avoid false positives
             matched_by = m.get('matched_by')
             match_type = m.get('match_type')
-            if match_type == 'keyword' and matched_by:
-                if not strong_match(m.get('title') or '', matched_by):
-                    logger.debug("rejected fuzzy-only match for uid=%s matched_by=%s title=%s", uid, matched_by, (m.get('title') or '')[:120])
-                    filtered_out_count += 1
-                    continue
+            logger.debug("processing match candidate: uid=%s match_type=%s matched_by=%s price=%s EUR", uid, match_type, matched_by, price_eur)
+            if match_type == 'keyword' and matched_by and not strong_match(m.get('title') or '', matched_by):
+                logger.debug("rejected fuzzy-only match for uid=%s matched_by=%s title=%s", uid, matched_by, (m.get('title') or '')[:120])
+                filtered_out_count += 1
+                continue
 
             # run evaluation
             eval_res = evaluate_listing({

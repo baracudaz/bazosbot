@@ -3,6 +3,7 @@
 Read device names from a file pointed to by POSTMARKETOS_MODELS_FILE (one per line or JSON array).
 This avoids downloading from the wiki.
 """
+
 from typing import Set
 from pathlib import Path
 import json
@@ -44,5 +45,7 @@ def get_supported_models() -> Set[str]:
         logger.warning("failed to read postmarketos cache file=%s", CACHE_FILE)
 
     # nothing available
-    logger.debug("POSTMARKETOS_MODELS_FILE not provided or unreadable; returning empty set")
+    logger.debug(
+        "POSTMARKETOS_MODELS_FILE not provided or unreadable; returning empty set"
+    )
     return set()
