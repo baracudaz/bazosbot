@@ -46,7 +46,13 @@ TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 DEFAULT_BAZOS_SEARCH_URLS = [
     "https://www.bazos.sk/rss.php?rub=mo&cat=451",
+    "https://www.bazos.sk/rss.php?rub=mo&cat=436",
+    "https://www.bazos.sk/rss.php?rub=mo&cat=304",
+    "https://www.bazos.sk/rss.php?rub=mo&cat=307",
     "https://www.bazos.cz/rss.php?rub=mo&cat=455",
+    "https://www.bazos.cz/rss.php?rub=mo&cat=440",
+    "https://www.bazos.cz/rss.php?rub=mo&cat=346",
+    "https://www.bazos.cz/rss.php?rub=mo&cat=349",
 ]
 # support multiple search URLs via comma-separated env var; fall back to the legacy single URL env var
 _search_urls_value = os.getenv("BAZOS_SEARCH_URLS") or os.getenv("BAZOS_SEARCH_URL") or ",".join(DEFAULT_BAZOS_SEARCH_URLS)
