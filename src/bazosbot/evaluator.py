@@ -3,8 +3,8 @@
 This module intentionally uses heuristic-only evaluation based on fuzzy model
 matching and price checks.
 """
+
 from typing import Dict, Set
-import os
 import re
 import difflib
 from dotenv import load_dotenv
@@ -12,12 +12,19 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-def _heuristic_evaluate(listing: Dict, supported_models: Set[str]) -> Dict:
+def _heuristic_evaluate(
+    listing: Dict,
+    supported_models: Set[str],
+    min_price_eur: float | None = None,
+    max_price_eur: float | None = None,
+) -> Dict:
     title = (listing.get("title") or "").lower()
     summary = (listing.get("summary") or "").lower()
     reasons = []
 
-    def _token_fuzzy_match(haystack: str, needle: str, token_ratio_thresh: float = 0.8) -> bool:
+    def _token_fuzzy_match(
+        haystack: str, needle: str, token_ratio_thresh: float = 0.8
+    ) -> bool:
         """Return True when each significant needle token is present approximately in haystack."""
         h_tokens = re.findall(r"\w+", haystack.lower())
         n_tokens = re.findall(r"\w+", needle.lower())
@@ -34,7 +41,10 @@ def _heuristic_evaluate(listing: Dict, supported_models: Set[str]) -> Dict:
                 continue
             if tok in h_tokens:
                 continue
-            if not any(difflib.SequenceMatcher(None, tok, h).ratio() >= token_ratio_thresh for h in h_tokens):
+            if not any(
+                difflib.SequenceMatcher(None, tok, h).ratio() >= token_ratio_thresh
+                for h in h_tokens
+            ):
                 return False
         return True
 
@@ -56,18 +66,27 @@ def _heuristic_evaluate(listing: Dict, supported_models: Set[str]) -> Dict:
         support_confidence = 0.2
         reasons.append("No exact model match in title/summary")
 
-    # basic k3s suitability heuristic: price and presence of words like 'battery'
+    # basic k3s suitability heuristic aligned with configured runtime price bounds
     price = listing.get("price_eur")
-    if price is not None:
-        if price <= float(os.getenv("PRICE_CAP_EUR", "50")):
+    if price is not None and min_price_eur is not None and max_price_eur is not None:
+        if min_price_eur <= price <= max_price_eur:
             k3s_suitability = "yes"
-            reasons.append(f"Price {price} EUR within cap")
+            reasons.append(
+                f"Price {price} EUR within range ({min_price_eur}-{max_price_eur})"
+            )
+        elif price < min_price_eur:
+            k3s_suitability = "no"
+            reasons.append(f"Price {price} EUR below minimum ({min_price_eur})")
         else:
             k3s_suitability = "no"
-            reasons.append(f"Price {price} EUR exceeds cap")
+            reasons.append(f"Price {price} EUR exceeds maximum ({max_price_eur})")
+    elif price is not None:
+        # price known but no configured bounds; avoid contradicting main_loop filtering
+        k3s_suitability = "unknown"
+        reasons.append(f"Price {price} EUR but no configured price bounds available")
     else:
         k3s_suitability = "unknown"
-        reasons.append("Price unknown")
+        reasons.append("Price unknown; cannot assess price-based suitability")
 
     return {
         "postmarketos_support": postmarketos_support,
@@ -77,6 +96,17 @@ def _heuristic_evaluate(listing: Dict, supported_models: Set[str]) -> Dict:
         "ai_used": False,
     }
 
-def evaluate_listing(listing: Dict, supported_models: Set[str]) -> Dict:
+
+def evaluate_listing(
+    listing: Dict,
+    supported_models: Set[str],
+    min_price_eur: float | None = None,
+    max_price_eur: float | None = None,
+) -> Dict:
     """Evaluate a listing using heuristic fuzzy matching only."""
-    return _heuristic_evaluate(listing, supported_models)
+    return _heuristic_evaluate(
+        listing,
+        supported_models,
+        min_price_eur=min_price_eur,
+        max_price_eur=max_price_eur,
+    )

@@ -1,4 +1,5 @@
 """Simple Telegram notifier using bot HTTP API via requests."""
+
 import requests
 import logging
 
@@ -17,7 +18,9 @@ def send_telegram(token: str, chat_id: str, text: str) -> bool:
         r = requests.post(url, data=payload, timeout=10)
         ok = r.status_code == 200
         if not ok:
-            logger.warning("telegram send failed status=%s text=%s", r.status_code, r.text[:300])
+            logger.warning(
+                "telegram send failed status=%s text=%s", r.status_code, r.text[:300]
+            )
         return ok
     except Exception as ex:
         logger.error("telegram send exception: %s", ex)

@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 from pathlib import Path
 
 from .postmarketos import get_supported_models
-from .scraper import search_listings, enrich_listing_price, strong_match
+from .scraper import search_listings, enrich_listing_price, strong_match, _contains_czk_currency
 from .notifier import send_telegram
 from .evaluator import evaluate_listing
 
@@ -25,8 +25,7 @@ load_dotenv()
 
 # logging config
 def _resolve_log_level() -> int:
-    configured = os.getenv("LOG_LEVEL", "").strip().upper()
-    if configured:
+    if configured := os.getenv("LOG_LEVEL", "").strip().upper():
         level = getattr(logging, configured, None)
         if isinstance(level, int):
             return level
@@ -45,11 +44,22 @@ DATA_DIR.mkdir(exist_ok=True)
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
-BAZOS_SEARCH_URL = os.getenv("BAZOS_SEARCH_URL", "https://www.bazos.sk/rss.php?rub=mo&cat=451")
-# support multiple search URLs via comma-separated env var; fall back to single BAZOS_SEARCH_URL
-BAZOS_SEARCH_URLS = [u.strip() for u in os.getenv("BAZOS_SEARCH_URLS", BAZOS_SEARCH_URL).split(",") if u.strip()]
+DEFAULT_BAZOS_SEARCH_URLS = [
+    "https://www.bazos.sk/rss.php?rub=mo&cat=451",
+    "https://www.bazos.sk/rss.php?rub=mo&cat=436",
+    "https://www.bazos.sk/rss.php?rub=mo&cat=304",
+    "https://www.bazos.sk/rss.php?rub=mo&cat=307",
+    "https://www.bazos.cz/rss.php?rub=mo&cat=455",
+    "https://www.bazos.cz/rss.php?rub=mo&cat=440",
+    "https://www.bazos.cz/rss.php?rub=mo&cat=346",
+    "https://www.bazos.cz/rss.php?rub=mo&cat=349",
+]
+# support multiple search URLs via comma-separated env var; fall back to the legacy single URL env var
+_search_urls_value = os.getenv("BAZOS_SEARCH_URLS") or os.getenv("BAZOS_SEARCH_URL") or ",".join(DEFAULT_BAZOS_SEARCH_URLS)
+BAZOS_SEARCH_URLS = [u.strip() for u in _search_urls_value.split(",") if u.strip()]
 CHECK_INTERVAL = int(os.getenv("CHECK_INTERVAL", "300"))
-PRICE_CAP_EUR = float(os.getenv("PRICE_CAP_EUR", "50"))  # strict cap; entries without parseable price are excluded
+MIN_PRICE_EUR = float(os.getenv("MIN_PRICE_EUR", "0"))
+MAX_PRICE_EUR = float(os.getenv("MAX_PRICE_EUR", "50"))  # strict max bound; entries without parseable price are excluded
 
 
 
@@ -95,15 +105,29 @@ def _format_confidence(v) -> str:
         return "n/a"
 
 
+def _is_czk_price(price: str | None) -> bool:
+    if not price:
+        return False
+    return _contains_czk_currency(price)
+
+
+def _format_price(price: str | None, price_eur) -> str | None:
+    if price and _is_czk_price(price) and price_eur is not None:
+        return f"{float(price_eur):.2f} EUR (from {price})"
+    if price:
+        return price
+    if price_eur is not None:
+        return f"{float(price_eur):.2f} EUR"
+    return None
+
+
 def format_message(item, eval_res):
     title = (item.get("title") or "").strip()
     # Some feed titles include trailing price (e.g. "model xyz: 30").
     # Keep the model line clean and show price only in the dedicated Price field.
-    title = re.sub(r":\s*\d[\d\s.,]*\s*(?:€|eur|eur\.)?\s*$", "", title, flags=re.IGNORECASE).strip()
+    title = re.sub(r":\s*\d[\d\s.,]*\s*(?:€|eur|eur\.|czk|kč|kc)?\s*$", "", title, flags=re.IGNORECASE).strip()
     url = (item.get("url") or "").strip()
-    price = item.get("price")
-    if not price and item.get("price_eur") is not None:
-        price = f"{item.get('price_eur')} EUR"
+    price = _format_price(item.get("price"), item.get("price_eur"))
 
     parts = [
         "New listing match",
@@ -156,24 +180,30 @@ def main_loop():
             # Defer listing page fetch until after keyword/model match to reduce source queries.
             enrich_listing_price(m)
 
-            # Apply strict price cap: require parseable price and value <= PRICE_CAP_EUR
+            uid = m.get('url') or '' or (m.get('title') or '')[:200]
+
+            # Apply strict price bounds: require parseable price and MIN_PRICE_EUR <= value <= MAX_PRICE_EUR
             price_eur = m.get('price_eur')
             if price_eur is None:
-                # skip items without price when using strict cap
+                logger.debug("filtering out match '%s': no parseable price (original raw price: %s)", uid, m.get('price'))
+                # skip items without price when using strict bounds
                 filtered_out_count += 1
                 continue
             try:
-                if float(price_eur) > PRICE_CAP_EUR:
+                price_eur_value = float(price_eur)
+                if price_eur_value < MIN_PRICE_EUR:
+                    logger.debug("filtering out match '%s': price %.2f EUR is below MIN_PRICE_EUR (%s)", uid, price_eur_value, MIN_PRICE_EUR)
                     filtered_out_count += 1
                     continue
-            except Exception:
+                if price_eur_value > MAX_PRICE_EUR:
+                    logger.debug("filtering out match '%s': price %.2f EUR is above MAX_PRICE_EUR (%s)", uid, price_eur_value, MAX_PRICE_EUR)
+                    filtered_out_count += 1
+                    continue
+            except Exception as ex:
+                logger.debug("filtering out match '%s': error parsing price value '%s': %s", uid, price_eur, ex)
                 filtered_out_count += 1
                 continue
 
-            uid = m.get('url') or ''
-            if not uid:
-                # fallback to title-based UID
-                uid = (m.get('title') or '')[:200]
             if uid in seen:
                 logger.debug("skipping seen uid=%s", uid)
                 filtered_out_count += 1
@@ -182,11 +212,11 @@ def main_loop():
             # additional confirmation: require strong match for keyword matches to avoid false positives
             matched_by = m.get('matched_by')
             match_type = m.get('match_type')
-            if match_type == 'keyword' and matched_by:
-                if not strong_match(m.get('title') or '', matched_by):
-                    logger.debug("rejected fuzzy-only match for uid=%s matched_by=%s title=%s", uid, matched_by, (m.get('title') or '')[:120])
-                    filtered_out_count += 1
-                    continue
+            logger.debug("processing match candidate: uid=%s match_type=%s matched_by=%s price=%s EUR", uid, match_type, matched_by, price_eur)
+            if match_type == 'keyword' and matched_by and not strong_match(m.get('title') or '', matched_by):
+                logger.debug("rejected fuzzy-only match for uid=%s matched_by=%s title=%s", uid, matched_by, (m.get('title') or '')[:120])
+                filtered_out_count += 1
+                continue
 
             # run evaluation
             eval_res = evaluate_listing({
@@ -195,7 +225,7 @@ def main_loop():
                 'price': m.get('price'),
                 'price_eur': m.get('price_eur'),
                 'published': m.get('published'),
-            }, supported_models)
+            }, supported_models, min_price_eur=MIN_PRICE_EUR, max_price_eur=MAX_PRICE_EUR)
             logger.debug("evaluation result: postmarketos=%s confidence=%.2f k3s=%s ai=%s", eval_res.get('postmarketos_support'), eval_res.get('support_confidence'), eval_res.get('k3s_suitability'), eval_res.get('ai_used'))
             logger.debug("evaluation reasons=%s", eval_res.get('reasons'))
 

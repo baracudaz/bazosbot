@@ -1,6 +1,6 @@
 # bazosbot — lowballer monitor (prototype)
 
-This is an initial Python prototype that monitors bazos.sk for listings matching
+This is an initial Python prototype that monitors bazos.sk and bazos.cz for listings matching
 postmarketOS-supported devices and notifies via Telegram (alerts-only mode).
 
 ## Quick start
@@ -35,4 +35,7 @@ docker compose logs -f
 
 - postmarketOS device list is fetched from the postmarketOS wiki category "Devices".
 - The bazos scraper is heuristic-based and may need tuning for accurate parsing.
+- Czech prices are converted from CZK to EUR for filtering and notifications.
+- Price filtering uses bounds from environment variables: `MIN_PRICE_EUR` and `MAX_PRICE_EUR`.
+- Listings with missing or unparsable prices are skipped.
 - Useful next steps: implement robust bazos parsing, rate-limiting, retries, and CLI.
