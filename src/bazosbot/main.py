@@ -25,8 +25,7 @@ load_dotenv()
 
 # logging config
 def _resolve_log_level() -> int:
-    configured = os.getenv("LOG_LEVEL", "").strip().upper()
-    if configured:
+    if configured := os.getenv("LOG_LEVEL", "").strip().upper():
         level = getattr(logging, configured, None)
         if isinstance(level, int):
             return level
@@ -53,7 +52,8 @@ DEFAULT_BAZOS_SEARCH_URLS = [
 _search_urls_value = os.getenv("BAZOS_SEARCH_URLS") or os.getenv("BAZOS_SEARCH_URL") or ",".join(DEFAULT_BAZOS_SEARCH_URLS)
 BAZOS_SEARCH_URLS = [u.strip() for u in _search_urls_value.split(",") if u.strip()]
 CHECK_INTERVAL = int(os.getenv("CHECK_INTERVAL", "300"))
-PRICE_CAP_EUR = float(os.getenv("PRICE_CAP_EUR", "50"))  # strict cap; entries without parseable price are excluded
+MIN_PRICE_EUR = float(os.getenv("MIN_PRICE_EUR", "0"))
+MAX_PRICE_EUR = float(os.getenv("MAX_PRICE_EUR", "50"))  # strict max bound; entries without parseable price are excluded
 
 
 
@@ -175,14 +175,18 @@ def main_loop():
             # Defer listing page fetch until after keyword/model match to reduce source queries.
             enrich_listing_price(m)
 
-            # Apply strict price cap: require parseable price and value <= PRICE_CAP_EUR
+            # Apply strict price bounds: require parseable price and MIN_PRICE_EUR <= value <= MAX_PRICE_EUR
             price_eur = m.get('price_eur')
             if price_eur is None:
-                # skip items without price when using strict cap
+                # skip items without price when using strict bounds
                 filtered_out_count += 1
                 continue
             try:
-                if float(price_eur) > PRICE_CAP_EUR:
+                price_eur_value = float(price_eur)
+                if price_eur_value < MIN_PRICE_EUR:
+                    filtered_out_count += 1
+                    continue
+                if price_eur_value > MAX_PRICE_EUR:
                     filtered_out_count += 1
                     continue
             except Exception:

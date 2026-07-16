@@ -56,15 +56,20 @@ def _heuristic_evaluate(listing: Dict, supported_models: Set[str]) -> Dict:
         support_confidence = 0.2
         reasons.append("No exact model match in title/summary")
 
-    # basic k3s suitability heuristic: price and presence of words like 'battery'
+    # basic k3s suitability heuristic aligned with runtime price bounds
     price = listing.get("price_eur")
     if price is not None:
-        if price <= float(os.getenv("PRICE_CAP_EUR", "50")):
+        min_price = float(os.getenv("MIN_PRICE_EUR", "0"))
+        max_price = float(os.getenv("MAX_PRICE_EUR", "50"))
+        if min_price <= price <= max_price:
             k3s_suitability = "yes"
-            reasons.append(f"Price {price} EUR within cap")
+            reasons.append(f"Price {price} EUR within range ({min_price}-{max_price})")
+        elif price < min_price:
+            k3s_suitability = "no"
+            reasons.append(f"Price {price} EUR below minimum ({min_price})")
         else:
             k3s_suitability = "no"
-            reasons.append(f"Price {price} EUR exceeds cap")
+            reasons.append(f"Price {price} EUR exceeds maximum ({max_price})")
     else:
         k3s_suitability = "unknown"
         reasons.append("Price unknown")
