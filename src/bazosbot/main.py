@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 from pathlib import Path
 
 from .postmarketos import get_supported_models
-from .scraper import search_listings, enrich_listing_price, strong_match
+from .scraper import search_listings, enrich_listing_price, strong_match, _contains_czk_currency
 from .notifier import send_telegram
 from .evaluator import evaluate_listing
 
@@ -102,8 +102,7 @@ def _format_confidence(v) -> str:
 def _is_czk_price(price: str | None) -> bool:
     if not price:
         return False
-    s = price.lower()
-    return "czk" in s or "kč" in s or re.search(r"\bkc\b", s) is not None
+    return _contains_czk_currency(price)
 
 
 def _format_price(price: str | None, price_eur) -> str | None:
@@ -218,7 +217,7 @@ def main_loop():
                 'price': m.get('price'),
                 'price_eur': m.get('price_eur'),
                 'published': m.get('published'),
-            }, supported_models)
+            }, supported_models, min_price_eur=MIN_PRICE_EUR, max_price_eur=MAX_PRICE_EUR)
             logger.debug("evaluation result: postmarketos=%s confidence=%.2f k3s=%s ai=%s", eval_res.get('postmarketos_support'), eval_res.get('support_confidence'), eval_res.get('k3s_suitability'), eval_res.get('ai_used'))
             logger.debug("evaluation reasons=%s", eval_res.get('reasons'))
 

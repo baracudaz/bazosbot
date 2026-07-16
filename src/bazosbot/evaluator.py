@@ -4,7 +4,6 @@ This module intentionally uses heuristic-only evaluation based on fuzzy model
 matching and price checks.
 """
 from typing import Dict, Set
-import os
 import re
 import difflib
 from dotenv import load_dotenv
@@ -12,7 +11,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-def _heuristic_evaluate(listing: Dict, supported_models: Set[str]) -> Dict:
+def _heuristic_evaluate(listing: Dict, supported_models: Set[str], min_price_eur: float | None = None, max_price_eur: float | None = None) -> Dict:
     title = (listing.get("title") or "").lower()
     summary = (listing.get("summary") or "").lower()
     reasons = []
@@ -56,23 +55,27 @@ def _heuristic_evaluate(listing: Dict, supported_models: Set[str]) -> Dict:
         support_confidence = 0.2
         reasons.append("No exact model match in title/summary")
 
-    # basic k3s suitability heuristic aligned with runtime price bounds
+    # basic k3s suitability heuristic aligned with configured runtime price bounds
     price = listing.get("price_eur")
-    if price is not None:
-        min_price = float(os.getenv("MIN_PRICE_EUR", "0"))
-        max_price = float(os.getenv("MAX_PRICE_EUR", "50"))
-        if min_price <= price <= max_price:
+    if price is not None and min_price_eur is not None and max_price_eur is not None:
+        if min_price_eur <= price <= max_price_eur:
             k3s_suitability = "yes"
-            reasons.append(f"Price {price} EUR within range ({min_price}-{max_price})")
-        elif price < min_price:
+            reasons.append(
+                f"Price {price} EUR within range ({min_price_eur}-{max_price_eur})"
+            )
+        elif price < min_price_eur:
             k3s_suitability = "no"
-            reasons.append(f"Price {price} EUR below minimum ({min_price})")
+            reasons.append(f"Price {price} EUR below minimum ({min_price_eur})")
         else:
             k3s_suitability = "no"
-            reasons.append(f"Price {price} EUR exceeds maximum ({max_price})")
+            reasons.append(f"Price {price} EUR exceeds maximum ({max_price_eur})")
+    elif price is not None:
+        # price known but no configured bounds; avoid contradicting main_loop filtering
+        k3s_suitability = "unknown"
+        reasons.append(f"Price {price} EUR but no configured price bounds available")
     else:
         k3s_suitability = "unknown"
-        reasons.append("Price unknown")
+        reasons.append("Price unknown; cannot assess price-based suitability")
 
     return {
         "postmarketos_support": postmarketos_support,
@@ -82,6 +85,6 @@ def _heuristic_evaluate(listing: Dict, supported_models: Set[str]) -> Dict:
         "ai_used": False,
     }
 
-def evaluate_listing(listing: Dict, supported_models: Set[str]) -> Dict:
+def evaluate_listing(listing: Dict, supported_models: Set[str], min_price_eur: float | None = None, max_price_eur: float | None = None) -> Dict:
     """Evaluate a listing using heuristic fuzzy matching only."""
-    return _heuristic_evaluate(listing, supported_models)
+    return _heuristic_evaluate(listing, supported_models, min_price_eur=min_price_eur, max_price_eur=max_price_eur)

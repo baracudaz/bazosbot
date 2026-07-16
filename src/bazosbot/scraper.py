@@ -116,8 +116,17 @@ def _parse_price_number(price_str: str) -> float | None:
     try:
         return float(normalized)
     except ValueError:
-        logger.debug("parse_price_to_eur failed to parse numeric from %s", price_str)
+        logger.debug("_parse_price_number failed to parse numeric from %s", price_str)
         return None
+
+
+def _contains_czk_currency(s: str) -> bool:
+    lowered = s.lower()
+    return (
+        "czk" in lowered
+        or "kč" in lowered
+        or re.search(r"\bkc\b", lowered) is not None
+    )
 
 
 def parse_price_to_eur(price_str: str) -> float | None:
@@ -128,7 +137,7 @@ def parse_price_to_eur(price_str: str) -> float | None:
     if val is None:
         return None
     # determine currency by suffix
-    if "czk" in s or "kč" in s or re.search(r"\bkc\b", s):
+    if _contains_czk_currency(s):
         # assume CZK -> convert approx 25 CZK per EUR
         eur = round(val / 25.0, 2)
         logger.debug("parsed price %s as %s EUR (assumed CZK)", price_str, eur)
