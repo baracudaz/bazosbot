@@ -10,6 +10,8 @@ import os
 import time
 import json
 import re
+import signal
+import sys
 from dotenv import load_dotenv
 from pathlib import Path
 
@@ -40,26 +42,27 @@ logger = logging.getLogger(__name__)
 
 DATA_DIR = Path("data")
 SEEN_FILE = DATA_DIR / "seen.json"
+DEFAULT_SEARCH_URLS_FILE = DATA_DIR / "bazos_search_urls.json"
 DATA_DIR.mkdir(exist_ok=True)
 
+def _load_default_urls() -> list[str]:
+    if DEFAULT_SEARCH_URLS_FILE.exists():
+        try:
+            return json.loads(DEFAULT_SEARCH_URLS_FILE.read_text())
+        except Exception as ex:
+            logger.warning("failed to load default search URLs from %s: %s", DEFAULT_SEARCH_URLS_FILE, ex)
+    return []
+
+DEFAULT_BAZOS_SEARCH_URLS = _load_default_urls()
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
-DEFAULT_BAZOS_SEARCH_URLS = [
-    "https://www.bazos.sk/rss.php?rub=mo&cat=451",
-    "https://www.bazos.sk/rss.php?rub=mo&cat=436",
-    "https://www.bazos.sk/rss.php?rub=mo&cat=304",
-    "https://www.bazos.sk/rss.php?rub=mo&cat=307",
-    "https://www.bazos.cz/rss.php?rub=mo&cat=455",
-    "https://www.bazos.cz/rss.php?rub=mo&cat=440",
-    "https://www.bazos.cz/rss.php?rub=mo&cat=346",
-    "https://www.bazos.cz/rss.php?rub=mo&cat=349",
-]
 # support multiple search URLs via comma-separated env var; fall back to the legacy single URL env var
 _search_urls_value = os.getenv("BAZOS_SEARCH_URLS") or os.getenv("BAZOS_SEARCH_URL") or ",".join(DEFAULT_BAZOS_SEARCH_URLS)
 BAZOS_SEARCH_URLS = [u.strip() for u in _search_urls_value.split(",") if u.strip()]
 CHECK_INTERVAL = int(os.getenv("CHECK_INTERVAL", "300"))
 MIN_PRICE_EUR = float(os.getenv("MIN_PRICE_EUR", "0"))
 MAX_PRICE_EUR = float(os.getenv("MAX_PRICE_EUR", "50"))  # strict max bound; entries without parseable price are excluded
+POSTMARKETOS_MODELS_FILE = os.getenv("POSTMARKETOS_MODELS_FILE", "data/postmarketos_models.json")
 
 
 
@@ -151,111 +154,124 @@ def format_message(item, eval_res):
 
 def main_loop():
     seen = load_seen()
-    while True:
-        cycle_start = time.time()
-        supported_models = get_supported_models()
-        keywords = build_search_keywords(list(supported_models))
-        if not keywords:
-            logger.warning("No keywords configured; exiting.")
-            return
-        logger.info("Starting scan cycle: keywords=%d models=%d urls=%d seen=%d", len(keywords), len(supported_models), len(BAZOS_SEARCH_URLS), len(seen))
-        all_matches = []
-        scan_failures = 0
-        for url in BAZOS_SEARCH_URLS:
-            logger.debug("Searching URL: %s", url)
-            try:
-                matches = search_listings(url, keywords, supported_models=list(supported_models))
-            except Exception as ex:
-                logger.warning("search_listings failed for %s: %s", url, ex)
-                matches = []
-                scan_failures += 1
-            for m in matches:
-                # annotate match with source URL
-                m['source_search_url'] = url
-            all_matches.extend(matches)
-        logger.info("Scan results: raw_matches=%d feed_failures=%d", len(all_matches), scan_failures)
-        new_seen_count = 0
-        filtered_out_count = 0
-        for m in all_matches:
-            # Defer listing page fetch until after keyword/model match to reduce source queries.
-            enrich_listing_price(m)
 
-            uid = m.get('url') or '' or (m.get('title') or '')[:200]
+    def handle_exit_signal(signum, frame):
+        logger.info("Received termination signal %d. Triggering graceful shutdown...", signum)
+        sys.exit(0)
 
-            # Apply strict price bounds: require parseable price and MIN_PRICE_EUR <= value <= MAX_PRICE_EUR
-            price_eur = m.get('price_eur')
-            if price_eur is None:
-                logger.debug("filtering out match '%s': no parseable price (original raw price: %s)", uid, m.get('price'))
-                # skip items without price when using strict bounds
-                filtered_out_count += 1
-                continue
-            try:
-                price_eur_value = float(price_eur)
-                if price_eur_value < MIN_PRICE_EUR:
-                    logger.debug("filtering out match '%s': price %.2f EUR is below MIN_PRICE_EUR (%s)", uid, price_eur_value, MIN_PRICE_EUR)
+    signal.signal(signal.SIGTERM, handle_exit_signal)
+    signal.signal(signal.SIGINT, handle_exit_signal)
+
+    try:
+        while True:
+            cycle_start = time.time()
+            supported_models = get_supported_models(POSTMARKETOS_MODELS_FILE)
+            keywords = build_search_keywords(list(supported_models))
+            if not keywords:
+                logger.warning("No keywords configured; exiting.")
+                return
+            logger.info("Starting scan cycle: keywords=%d models=%d urls=%d seen=%d", len(keywords), len(supported_models), len(BAZOS_SEARCH_URLS), len(seen))
+            all_matches = []
+            scan_failures = 0
+            for url in BAZOS_SEARCH_URLS:
+                logger.debug("Searching URL: %s", url)
+                try:
+                    matches = search_listings(url, keywords, supported_models=list(supported_models))
+                except Exception as ex:
+                    logger.warning("search_listings failed for %s: %s", url, ex)
+                    matches = []
+                    scan_failures += 1
+                for m in matches:
+                    # annotate match with source URL
+                    m['source_search_url'] = url
+                all_matches.extend(matches)
+            logger.info("Scan results: raw_matches=%d feed_failures=%d", len(all_matches), scan_failures)
+            new_seen_count = 0
+            filtered_out_count = 0
+            for m in all_matches:
+                # Defer listing page fetch until after keyword/model match to reduce source queries.
+                enrich_listing_price(m)
+
+                uid = m.get('url') or '' or (m.get('title') or '')[:200]
+
+                # Apply strict price bounds: require parseable price and MIN_PRICE_EUR <= value <= MAX_PRICE_EUR
+                price_eur = m.get('price_eur')
+                if price_eur is None:
+                    logger.debug("filtering out match '%s': no parseable price (original raw price: %s)", uid, m.get('price'))
+                    # skip items without price when using strict bounds
                     filtered_out_count += 1
                     continue
-                if price_eur_value > MAX_PRICE_EUR:
-                    logger.debug("filtering out match '%s': price %.2f EUR is above MAX_PRICE_EUR (%s)", uid, price_eur_value, MAX_PRICE_EUR)
+                try:
+                    price_eur_value = float(price_eur)
+                    if price_eur_value < MIN_PRICE_EUR:
+                        logger.debug("filtering out match '%s': price %.2f EUR is below MIN_PRICE_EUR (%s)", uid, price_eur_value, MIN_PRICE_EUR)
+                        filtered_out_count += 1
+                        continue
+                    if price_eur_value > MAX_PRICE_EUR:
+                        logger.debug("filtering out match '%s': price %.2f EUR is above MAX_PRICE_EUR (%s)", uid, price_eur_value, MAX_PRICE_EUR)
+                        filtered_out_count += 1
+                        continue
+                except Exception as ex:
+                    logger.debug("filtering out match '%s': error parsing price value '%s': %s", uid, price_eur, ex)
                     filtered_out_count += 1
                     continue
-            except Exception as ex:
-                logger.debug("filtering out match '%s': error parsing price value '%s': %s", uid, price_eur, ex)
-                filtered_out_count += 1
-                continue
 
-            if uid in seen:
-                logger.debug("skipping seen uid=%s", uid)
-                filtered_out_count += 1
-                continue
+                if uid in seen:
+                    logger.debug("skipping seen uid=%s", uid)
+                    filtered_out_count += 1
+                    continue
 
-            # additional confirmation: require strong match for keyword matches to avoid false positives
-            matched_by = m.get('matched_by')
-            match_type = m.get('match_type')
-            logger.debug("processing match candidate: uid=%s match_type=%s matched_by=%s price=%s EUR", uid, match_type, matched_by, price_eur)
-            if match_type == 'keyword' and matched_by and not strong_match(m.get('title') or '', matched_by):
-                logger.debug("rejected fuzzy-only match for uid=%s matched_by=%s title=%s", uid, matched_by, (m.get('title') or '')[:120])
-                filtered_out_count += 1
-                continue
+                # additional confirmation: require strong match for keyword matches to avoid false positives
+                matched_by = m.get('matched_by')
+                match_type = m.get('match_type')
+                logger.debug("processing match candidate: uid=%s match_type=%s matched_by=%s price=%s EUR", uid, match_type, matched_by, price_eur)
+                if match_type == 'keyword' and matched_by and not strong_match(m.get('title') or '', matched_by):
+                    logger.debug("rejected fuzzy-only match for uid=%s matched_by=%s title=%s", uid, matched_by, (m.get('title') or '')[:120])
+                    filtered_out_count += 1
+                    continue
 
-            # run evaluation
-            eval_res = evaluate_listing({
-                'title': m.get('title'),
-                'url': m.get('url'),
-                'price': m.get('price'),
-                'price_eur': m.get('price_eur'),
-                'published': m.get('published'),
-            }, supported_models, min_price_eur=MIN_PRICE_EUR, max_price_eur=MAX_PRICE_EUR)
-            logger.debug("evaluation result: postmarketos=%s confidence=%.2f k3s=%s ai=%s", eval_res.get('postmarketos_support'), eval_res.get('support_confidence'), eval_res.get('k3s_suitability'), eval_res.get('ai_used'))
-            logger.debug("evaluation reasons=%s", eval_res.get('reasons'))
+                # run evaluation
+                eval_res = evaluate_listing({
+                    'title': m.get('title'),
+                    'url': m.get('url'),
+                    'price': m.get('price'),
+                    'price_eur': m.get('price_eur'),
+                    'published': m.get('published'),
+                }, supported_models, min_price_eur=MIN_PRICE_EUR, max_price_eur=MAX_PRICE_EUR)
+                logger.debug("evaluation result: postmarketos=%s confidence=%.2f k3s=%s ai=%s", eval_res.get('postmarketos_support'), eval_res.get('support_confidence'), eval_res.get('k3s_suitability'), eval_res.get('ai_used'))
+                logger.debug("evaluation reasons=%s", eval_res.get('reasons'))
 
-            # attach evaluation to message
-            msg = format_message(m, eval_res)
-            logger.info("New match: %s", uid)
-            logger.debug("message=\n%s", msg)
-            if TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID:
-                ok = send_telegram(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, msg)
-                logger.debug("telegram send status=%s", ok)
-                if ok:
+                # attach evaluation to message
+                msg = format_message(m, eval_res)
+                logger.info("New match: %s", uid)
+                logger.debug("message=\n%s", msg)
+                if TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID:
+                    ok = send_telegram(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, msg)
+                    logger.debug("telegram send status=%s", ok)
+                    if ok:
+                        seen.add(uid)
+                        save_seen(seen)
+                        new_seen_count += 1
+                    else:
+                        logger.warning("not marking uid=%s as seen because telegram send failed", uid)
+                else:
+                    # no telegram configured — still mark as seen to avoid reprocessing
                     seen.add(uid)
                     save_seen(seen)
                     new_seen_count += 1
-                else:
-                    logger.warning("not marking uid=%s as seen because telegram send failed", uid)
-            else:
-                # no telegram configured — still mark as seen to avoid reprocessing
-                seen.add(uid)
-                save_seen(seen)
-                new_seen_count += 1
+            save_seen(seen)
+            logger.info(
+                "Cycle done: new_seen=%d filtered=%d total_seen=%d duration_sec=%.2f",
+                new_seen_count,
+                filtered_out_count,
+                len(seen),
+                time.time() - cycle_start,
+            )
+            time.sleep(CHECK_INTERVAL)
+    except (KeyboardInterrupt, SystemExit):
+        logger.info("Bot execution interrupted. Saving seen items.")
+    finally:
         save_seen(seen)
-        logger.info(
-            "Cycle done: new_seen=%d filtered=%d total_seen=%d duration_sec=%.2f",
-            new_seen_count,
-            filtered_out_count,
-            len(seen),
-            time.time() - cycle_start,
-        )
-        time.sleep(CHECK_INTERVAL)
 
 
 if __name__ == '__main__':

@@ -7,9 +7,6 @@ matching and price checks.
 from typing import Dict, Set
 import re
 import difflib
-from dotenv import load_dotenv
-
-load_dotenv()
 
 
 def _heuristic_evaluate(

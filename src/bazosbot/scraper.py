@@ -247,11 +247,7 @@ def enrich_listing_price(listing: Dict) -> Dict:
 def extract_listings_from_html(html: str, base_url: str) -> List[Dict]:
     soup = BeautifulSoup(html, "html.parser")
     listings = []
-    # Try common bazos patterns first
-    # Many bazos pages use links inside <a class="inzerat"> or article/listing blocks
-    anchors = []
-    anchors.extend(soup.find_all("a", class_=lambda v: v and "inzerat" in v))
-    anchors.extend(soup.find_all("a", href=True))
+    anchors = soup.find_all("a", href=True)
 
     seen = set()
     for a in anchors:
@@ -284,6 +280,54 @@ def extract_listings_from_html(html: str, base_url: str) -> List[Dict]:
     return listings
 
 
+def _filter_and_tag_listings(
+    listings: List[Dict], keys: List[str], models: List[str]
+) -> List[Dict]:
+    results = []
+    for item in listings:
+        title = item.get("title", "") or ""
+        url = item.get("url", "") or ""
+        searchable = f"{title} {url}".strip()
+
+        # If neither keywords nor models are defined, include everything
+        if not keys and not models:
+            results.append(item)
+            continue
+
+        matched = False
+        # Check keywords
+        for k in keys:
+            if fuzzy_contains(searchable, k):
+                logger.debug(
+                    "fuzzy matched entry title/url=%s keyword=%s",
+                    searchable[:120],
+                    k,
+                )
+                item["matched_by"] = k
+                item["match_type"] = "keyword"
+                results.append(item)
+                matched = True
+                break
+        if matched:
+            continue
+
+        # Check supported models
+        for m in models:
+            if fuzzy_contains(searchable, m):
+                logger.debug(
+                    "fuzzy matched entry title/url=%s model=%s",
+                    searchable[:120],
+                    m[:60],
+                )
+                item["matched_by"] = m
+                item["match_type"] = "model"
+                results.append(item)
+                matched = True
+                break
+
+    return results
+
+
 def search_listings(
     category_url: str, keywords: List[str], supported_models: List[str] | None = None
 ) -> List[Dict]:
@@ -296,7 +340,7 @@ def search_listings(
     """
     keys = [k.lower() for k in (keywords or []) if k]
     models = [m.lower() for m in (supported_models or []) if m]
-    results = []
+
     # detect RSS-like URL
     if (
         "rss" in category_url
@@ -304,85 +348,9 @@ def search_listings(
         or "rss.php" in category_url
     ):
         entries = fetch_rss_entries(category_url)
-        for e in entries:
-            title = e.get("title", "") or ""
-            url = e.get("link", "") or e.get("url", "") or ""
-            searchable = f"{title} {url}".strip()
-            matched = False
-            # check keywords
-            if keys:
-                for k in keys:
-                    if fuzzy_contains(searchable, k):
-                        logger.debug(
-                            "fuzzy matched entry title/url=%s keyword=%s",
-                            searchable[:120],
-                            k,
-                        )
-                        e["matched_by"] = k
-                        e["match_type"] = "keyword"
-                        results.append(e)
-                        matched = True
-                        break
-            if matched:
-                continue
-            # check supported models
-            if models:
-                for m in models:
-                    if fuzzy_contains(searchable, m):
-                        logger.debug(
-                            "fuzzy matched entry title/url=%s model=%s",
-                            searchable[:120],
-                            m[:60],
-                        )
-                        e["matched_by"] = m
-                        e["match_type"] = "model"
-                        results.append(e)
-                        matched = True
-                        break
-            if matched:
-                continue
-            if not keys and not models:
-                results.append(e)
-        return results
+        return _filter_and_tag_listings(entries, keys, models)
 
     # fallback to HTML
     html = fetch_category_html(category_url)
     items = extract_listings_from_html(html, category_url)
-    for it in items:
-        title = it.get("title", "") or ""
-        url = it.get("url", "") or ""
-        searchable = f"{title} {url}".strip()
-        matched = False
-        if keys:
-            for k in keys:
-                if fuzzy_contains(searchable, k):
-                    logger.debug(
-                        "fuzzy matched html entry title/url=%s keyword=%s",
-                        searchable[:120],
-                        k,
-                    )
-                    it["matched_by"] = k
-                    it["match_type"] = "keyword"
-                    results.append(it)
-                    matched = True
-                    break
-        if matched:
-            continue
-        if models:
-            for m in models:
-                if fuzzy_contains(searchable, m):
-                    logger.debug(
-                        "fuzzy matched html entry title/url=%s model=%s",
-                        searchable[:120],
-                        m[:60],
-                    )
-                    it["matched_by"] = m
-                    it["match_type"] = "model"
-                    results.append(it)
-                    matched = True
-                    break
-        if matched:
-            continue
-        if not keys and not models:
-            results.append(it)
-    return results
+    return _filter_and_tag_listings(items, keys, models)

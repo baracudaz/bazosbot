@@ -11,38 +11,28 @@ import logging
 import os
 
 logger = logging.getLogger(__name__)
-CACHE_FILE = Path("data/postmarketos_models.json")
-
-
-def get_supported_models() -> Set[str]:
-    """Return a set of device names using only the file from POSTMARKETOS_MODELS_FILE.
+def get_supported_models(models_file: str | Path | None = None) -> Set[str]:
+    """Return a set of device names using the provided models file or the POSTMARKETOS_MODELS_FILE env var.
 
     The file may be a JSON array (e.g. ["Device A", "Device B"]) or a plain
-    text file with one device name per line. If the env var is not set or the
-    file is unreadable, fall back to the cached data/postmarketos_models.json if present.
+    text file with one device name per line.
     """
-    env_path = os.getenv("POSTMARKETOS_MODELS_FILE")
-    if env_path:
+    path_str = models_file or os.getenv("POSTMARKETOS_MODELS_FILE")
+    if path_str:
         try:
-            env_file = Path(env_path)
-            if env_file.exists():
-                txt = env_file.read_text()
+            file_path = Path(path_str)
+            if file_path.exists():
+                txt = file_path.read_text()
                 try:
                     arr = json.loads(txt)
                     return {t.lower() for t in arr}
                 except Exception:
                     lines = [line.strip() for line in txt.splitlines() if line.strip()]
                     return {line.lower() for line in lines}
+            else:
+                logger.warning("POSTMARKETOS_MODELS_FILE does not exist: %s", path_str)
         except Exception:
-            logger.warning("failed to load POSTMARKETOS_MODELS_FILE=%s", env_path)
-
-    # fallback to cached file if present
-    try:
-        if CACHE_FILE.exists():
-            data = json.loads(CACHE_FILE.read_text())
-            return {t.lower() for t in data}
-    except Exception:
-        logger.warning("failed to read postmarketos cache file=%s", CACHE_FILE)
+            logger.warning("failed to load POSTMARKETOS_MODELS_FILE=%s", path_str)
 
     # nothing available
     logger.debug(
