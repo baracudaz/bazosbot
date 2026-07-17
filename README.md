@@ -12,30 +12,48 @@ postmarketOS-supported devices and notifies via Telegram (alerts-only mode).
    pip install -r requirements.txt
    ```
 
-2. Copy .env.example to .env and set `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`.
+2. Copy `.env.example` to `.env` and set `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`.
 
 3. Run:
-   `python -m src.bazosbot.main`
+   ```bash
+   python -m src.bazosbot.main
+   ```
 
-## Docker
+## Configuration
+
+- **Search URLs**: By default, the bot scans the RSS feeds listed in `data/bazos_search_urls.json`. You can customize this file or override it by setting `BAZOS_SEARCH_URLS` (comma-separated list) or `BAZOS_SEARCH_URL` in `.env`.
+- **Supported Devices**: The list of target device model names is loaded from the file specified by the `POSTMARKETOS_MODELS_FILE` env var, which defaults to `data/postmarketos_models.json`.
+- **Price Filtering**: Set `MIN_PRICE_EUR` and `MAX_PRICE_EUR` in `.env` to restrict matches. Listings with missing or unparseable prices are automatically skipped.
+
+## Graceful Shutdown
+
+The bot registers handlers for `SIGINT` (Ctrl+C) and `SIGTERM` (system termination). When these signals are received, the bot executes a graceful shutdown and ensures the list of processed listing IDs is persisted to `data/seen.json` to avoid duplicate notifications on restart.
+
+## Docker & Deployment
+
+To build and run directly via Docker:
 
 ```bash
 docker build -t bazosbot:latest .
 docker run --env-file .env -v "$(pwd)/data:/app/data" --rm bazosbot:latest
 ```
 
-Or use Docker Compose:
+Or run via Docker Compose:
 
 ```bash
 docker compose up --build -d
 docker compose logs -f
 ```
 
+### Automated Deployment
+
+The repository includes a `deploy.sh` script. Executing it will:
+
+1. Fetch changes from `origin/main`.
+2. Rebuild and restart the container if new commits are detected.
+3. Automatically start the container via `docker compose` if it is not currently running.
+
 ## Notes
 
-- postmarketOS device list is fetched from the postmarketOS wiki category "Devices".
-- The bazos scraper is heuristic-based and may need tuning for accurate parsing.
 - Czech prices are converted from CZK to EUR for filtering and notifications.
-- Price filtering uses bounds from environment variables: `MIN_PRICE_EUR` and `MAX_PRICE_EUR`.
-- Listings with missing or unparsable prices are skipped.
-- Useful next steps: implement robust bazos parsing, rate-limiting, retries, and CLI.
+- The bazos scraper is heuristic-based and may need tuning for accurate parsing.
