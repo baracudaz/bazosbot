@@ -3,34 +3,28 @@ set -euo pipefail
 
 FORCE=false
 
-# Parse command line flags (supports -f, --force, -force)
+# Parse arguments
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    -f|--force|-force)
-      FORCE=true
-      shift
-      ;;
-    *)
-      echo "Usage: $0 [-f | --force]" >&2
-      exit 1
-      ;;
+    -f|--force|-force) FORCE=true; shift ;;
+    *) echo "Usage: $0 [-f|--force]" >&2; exit 1 ;;
   esac
 done
 
 cd "$(dirname "$(readlink -f "$0")")"
 
-git fetch origin
+git fetch origin main
 
-if [ "$FORCE" = true ]; then
-  echo "==> Force flag set. Pulling and rebuilding..."
+LOCAL_HASH=$(git rev-parse HEAD)
+REMOTE_HASH=$(git rev-parse origin/main)
+CONTAINER_RUNNING=$(docker ps -q -f name=^/bazosbot$ -f status=running)
+
+if [[ "$FORCE" == "true" ]] || [[ "$LOCAL_HASH" != "$REMOTE_HASH" ]]; then
+  echo "==> Rebuilding and deploying updates..."
   git reset --hard origin/main
   docker compose up --build -d
-elif [ "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)" ]; then
-  echo "==> New changes detected. Pulling and rebuilding the image..."
-  git reset --hard origin/main
-  docker compose up --build -d
-elif [ -z "$(docker ps -q -f name=^/bazosbot$ -f status=running)" ]; then
-  echo "==> bazosbot is not running. Starting it..."
+elif [[ -z "$CONTAINER_RUNNING" ]]; then
+  echo "==> Container not running. Starting..."
   docker compose up -d
 else
   echo "==> bazosbot is up to date and running."
