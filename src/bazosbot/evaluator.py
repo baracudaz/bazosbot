@@ -8,6 +8,15 @@ from typing import Dict, List, Optional, Tuple
 import re
 import difflib
 
+# Minimum SequenceMatcher ratio (exclusive) for two tokens to be considered a
+# fuzzy match. Must stay strictly-greater-than: e.g. "fairphone"/"iphone"
+# score exactly 0.8, and an inclusive threshold would fuzzy-match them.
+FUZZY_TOKEN_RATIO_THRESH = 0.8
+
+# Tokens this short or shorter are too ambiguous to fuzzy-match reliably
+# (e.g. "pi", "mi", "iii") and are only checked for an exact hit.
+MIN_FUZZY_TOKEN_LEN = 4
+
 
 def _hardware_k3s_label(model_meta: Optional[Dict]) -> Tuple[str, List[str]]:
     """Derive a k3s-suitability label from a matched device's RAM/storage/score metadata.
@@ -97,14 +106,18 @@ def _heuristic_evaluate(
     summary = (listing.get("summary") or "").lower()
 
     def _token_fuzzy_match(
-        haystack: str, needle: str, token_ratio_thresh: float = 0.8
+        haystack: str,
+        needle: str,
+        token_ratio_thresh: float = FUZZY_TOKEN_RATIO_THRESH,
     ) -> bool:
         """Return True when each significant needle token is present approximately in haystack."""
         h_tokens = re.findall(r"\w+", haystack.lower())
         n_tokens = re.findall(r"\w+", needle.lower())
         if not h_tokens or not n_tokens:
             return False
-        important = [t for t in n_tokens if len(t) > 1]
+        # Single-digit model numbers (e.g. the "4" in "Fairphone 4") are
+        # significant and must not be dropped just for being short.
+        important = [t for t in n_tokens if len(t) > 1 or t.isdigit()]
         if not important:
             return False
         for tok in important:
@@ -115,8 +128,15 @@ def _heuristic_evaluate(
                 continue
             if tok in h_tokens:
                 continue
+            # Short tokens are too ambiguous to fuzzy-match reliably, so
+            # require an exact match for them but don't veto the whole
+            # device on a miss — the digit-bearing tokens above already
+            # carry the real discriminating power (e.g. "raspberry pi 4"
+            # still requires "4" even if "pi" isn't found verbatim).
+            if len(tok) < MIN_FUZZY_TOKEN_LEN:
+                continue
             if not any(
-                difflib.SequenceMatcher(None, tok, h).ratio() >= token_ratio_thresh
+                difflib.SequenceMatcher(None, tok, h).ratio() > token_ratio_thresh
                 for h in h_tokens
             ):
                 return False
