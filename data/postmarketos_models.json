@@ -1,34 +1,158 @@
 [
-  "fairphone 4",
-  "google pixel 3",
-  "google pixel 3a",
-  "google pixel 4",
-  "google pixel 4a",
-  "oneplus 6",
-  "oneplus 6t",
-  "pine64 pinephone pro",
-  "pine64 pinephone",
-  "purism librem 5",
-  "samsung galaxy core prime ve lte",
-  "samsung galaxy s iii",
-  "samsung galaxy s9",
-  "shift shift6mq",
-  "vsmart joy 3",
-  "xiaomi 9t",
-  "xiaomi mi 9t",
-  "xiaomi mi a1",
-  "xiaomi mi max 2",
-  "xiaomi poco f1",
-  "xiaomi poco x3 nfc",
-  "xiaomi pocophone f1",
-  "xiaomi redmi 4 prime",
-  "xiaomi redmi 5 plus",
-  "xiaomi redmi 7",
-  "xiaomi redmi k20",
-  "xiaomi redmi note 4",
-  "xiaomi redmi note 4x",
-  "raspberry pi 8gb",
-  "raspberry pi 4",
-  "raspberry pi 5",
-  "snapdragon"
+  {
+    "device": "Raspberry Pi 4 (2/4/8GB)",
+    "score": 5,
+    "ram": "2/4/8 GB",
+    "storage": "microSD or USB-boot SSD (no fixed size)"
+  },
+  {
+    "device": "Raspberry Pi 5 (4/8/16GB)",
+    "score": 5,
+    "ram": "4/8/16 GB",
+    "storage": "microSD or NVMe via PCIe HAT"
+  },
+  {
+    "device": "OnePlus 6T",
+    "score": 4,
+    "ram": "6/8 GB",
+    "storage": "128/256 GB UFS 2.1 (no microSD)"
+  },
+  {
+    "device": "OnePlus 6",
+    "score": 4,
+    "ram": "6/8 GB",
+    "storage": "64/128/256 GB UFS 2.1 (no microSD)"
+  },
+  {
+    "device": "Xiaomi POCO F1 / Pocophone F1",
+    "score": 4,
+    "ram": "6/8 GB",
+    "storage": "64/128/256 GB UFS 2.1 + microSD"
+  },
+  {
+    "device": "Google Pixel 3a",
+    "score": 4,
+    "ram": "4 GB",
+    "storage": "64 GB UFS 2.0 (no microSD)"
+  },
+  {
+    "device": "PINE64 PinePhone Pro",
+    "score": 4,
+    "ram": "4 GB",
+    "storage": "128 GB eMMC + microSD"
+  },
+  {
+    "device": "PINE64 PinePhone",
+    "score": 4,
+    "ram": "2/3 GB",
+    "storage": "16/32 GB eMMC + microSD"
+  },
+  {
+    "device": "Samsung Galaxy S9",
+    "score": 4,
+    "ram": "4 GB",
+    "storage": "64 GB UFS 2.1 + microSD"
+  },
+  {
+    "device": "Fairphone 4",
+    "score": 4,
+    "ram": "6/8 GB",
+    "storage": "128/256 GB UFS 2.1 + microSD"
+  },
+  {
+    "device": "Shift SHIFT6mq",
+    "score": 3,
+    "ram": "4 GB",
+    "storage": "64/128 GB UFS 2.1 + microSD"
+  },
+  {
+    "device": "Purism Librem 5",
+    "score": 2,
+    "ram": "3 GB",
+    "storage": "32 GB eMMC + microSD"
+  },
+  {
+    "device": "Google Pixel 4a",
+    "score": 2,
+    "ram": "6 GB",
+    "storage": "128 GB UFS 2.1 (no microSD)"
+  },
+  {
+    "device": "Xiaomi POCO X3 NFC",
+    "score": 2,
+    "ram": "6/8 GB",
+    "storage": "64/128 GB UFS 2.1 (no microSD)"
+  },
+  {
+    "device": "Xiaomi 9T / Mi 9T / Redmi K20",
+    "score": 4,
+    "ram": "6 GB",
+    "storage": "64/128 GB UFS 2.1 (no microSD)"
+  },
+  {
+    "device": "Xiaomi Redmi Note 4 / 4X",
+    "score": 2,
+    "ram": "2/3/4 GB",
+    "storage": "16/32/64 GB eMMC + microSD"
+  },
+  {
+    "device": "Google Pixel 4",
+    "score": 2,
+    "ram": "6 GB",
+    "storage": "64/128 GB UFS 2.1 (no microSD)"
+  },
+  {
+    "device": "Google Pixel 3",
+    "score": 2,
+    "ram": "4 GB",
+    "storage": "64/128 GB UFS 2.1 (no microSD)"
+  },
+  {
+    "device": "Xiaomi Redmi 5 Plus",
+    "score": 2,
+    "ram": "3/4 GB",
+    "storage": "32/64 GB eMMC + microSD"
+  },
+  {
+    "device": "Xiaomi Redmi 7",
+    "score": 2,
+    "ram": "2/3 GB",
+    "storage": "16/32/64 GB eMMC + microSD"
+  },
+  {
+    "device": "Xiaomi Redmi 4 Prime",
+    "score": 2,
+    "ram": "3 GB",
+    "storage": "32 GB eMMC (no microSD)"
+  },
+  {
+    "device": "Samsung Galaxy S III",
+    "score": 2,
+    "ram": "1 GB",
+    "storage": "16 GB eMMC + microSD"
+  },
+  {
+    "device": "Xiaomi Mi Max 2",
+    "score": 1,
+    "ram": "4 GB",
+    "storage": "64/128 GB eMMC (no microSD)"
+  },
+  {
+    "device": "Samsung Galaxy A21s",
+    "score": 1,
+    "ram": "3/4 GB",
+    "storage": "32/64/128 GB eMMC 5.1 + microSD"
+  },
+  {
+    "device": "Samsung Galaxy Core Prime VE LTE",
+    "score": 1,
+    "ram": "1 GB",
+    "storage": "8 GB eMMC + microSD"
+  },
+  {
+    "device": "Vsmart Joy 3",
+    "score": 1,
+    "ram": "3/4 GB",
+    "storage": "32/64 GB eMMC + microSD"
+  }
 ]
