@@ -8,6 +8,15 @@ from typing import Dict, Set
 import re
 import difflib
 
+# Minimum SequenceMatcher ratio (exclusive) for two tokens to be considered a
+# fuzzy match. Must stay strictly-greater-than: e.g. "fairphone"/"iphone"
+# score exactly 0.8, and an inclusive threshold would fuzzy-match them.
+FUZZY_TOKEN_RATIO_THRESH = 0.8
+
+# Tokens this short or shorter are too ambiguous to fuzzy-match reliably
+# (e.g. "pi", "mi", "iii") and are only checked for an exact hit.
+MIN_FUZZY_TOKEN_LEN = 4
+
 
 def _heuristic_evaluate(
     listing: Dict,
@@ -20,7 +29,9 @@ def _heuristic_evaluate(
     reasons = []
 
     def _token_fuzzy_match(
-        haystack: str, needle: str, token_ratio_thresh: float = 0.8
+        haystack: str,
+        needle: str,
+        token_ratio_thresh: float = FUZZY_TOKEN_RATIO_THRESH,
     ) -> bool:
         """Return True when each significant needle token is present approximately in haystack."""
         h_tokens = re.findall(r"\w+", haystack.lower())
@@ -40,13 +51,12 @@ def _heuristic_evaluate(
                 continue
             if tok in h_tokens:
                 continue
-            # Short tokens are too ambiguous to fuzzy-match reliably
-            # (e.g. "fairphone"/"iphone" score exactly 0.8), so require an
-            # exact match for them but don't veto the whole device on a
-            # miss — the digit-bearing tokens above already carry the
-            # real discriminating power (e.g. "raspberry pi 4" still
-            # requires "4" even if "pi" isn't found verbatim).
-            if len(tok) <= 3:
+            # Short tokens are too ambiguous to fuzzy-match reliably, so
+            # require an exact match for them but don't veto the whole
+            # device on a miss — the digit-bearing tokens above already
+            # carry the real discriminating power (e.g. "raspberry pi 4"
+            # still requires "4" even if "pi" isn't found verbatim).
+            if len(tok) < MIN_FUZZY_TOKEN_LEN:
                 continue
             if not any(
                 difflib.SequenceMatcher(None, tok, h).ratio() > token_ratio_thresh
