@@ -41,9 +41,13 @@ def _heuristic_evaluate(
             if tok in h_tokens:
                 continue
             # Short tokens are too ambiguous to fuzzy-match reliably
-            # (e.g. "fairphone"/"iphone" score exactly 0.8).
+            # (e.g. "fairphone"/"iphone" score exactly 0.8), so require an
+            # exact match for them but don't veto the whole device on a
+            # miss — the digit-bearing tokens above already carry the
+            # real discriminating power (e.g. "raspberry pi 4" still
+            # requires "4" even if "pi" isn't found verbatim).
             if len(tok) <= 3:
-                return False
+                continue
             if not any(
                 difflib.SequenceMatcher(None, tok, h).ratio() > token_ratio_thresh
                 for h in h_tokens
