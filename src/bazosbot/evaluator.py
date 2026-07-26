@@ -27,7 +27,9 @@ def _heuristic_evaluate(
         n_tokens = re.findall(r"\w+", needle.lower())
         if not h_tokens or not n_tokens:
             return False
-        important = [t for t in n_tokens if len(t) > 1]
+        # Single-digit model numbers (e.g. the "4" in "Fairphone 4") are
+        # significant and must not be dropped just for being short.
+        important = [t for t in n_tokens if len(t) > 1 or t.isdigit()]
         if not important:
             return False
         for tok in important:
@@ -38,8 +40,12 @@ def _heuristic_evaluate(
                 continue
             if tok in h_tokens:
                 continue
+            # Short tokens are too ambiguous to fuzzy-match reliably
+            # (e.g. "fairphone"/"iphone" score exactly 0.8).
+            if len(tok) <= 3:
+                return False
             if not any(
-                difflib.SequenceMatcher(None, tok, h).ratio() >= token_ratio_thresh
+                difflib.SequenceMatcher(None, tok, h).ratio() > token_ratio_thresh
                 for h in h_tokens
             ):
                 return False
