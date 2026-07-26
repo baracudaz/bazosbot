@@ -138,14 +138,29 @@ def format_message(item, eval_res):
     ]
     if price:
         parts.append(f"Price: {price}")
-    parts.extend([
-        f"postmarketOS support: {_bool_label(eval_res.get('postmarketos_support'))}",
-        f"cluster suitability (k3s): {eval_res.get('k3s_suitability', 'unknown')}",
-    ])
 
-    reasons = [r for r in (eval_res.get("reasons") or []) if r]
-    if reasons:
-        parts.append(f"Why: {'; '.join(reasons[:2])}")
+    support_line = f"postmarketOS support: {_bool_label(eval_res.get('postmarketos_support'))}"
+    matched_models = eval_res.get("matched_models") or []
+    if matched_models:
+        support_line += f" ({', '.join(matched_models[:2])})"
+    parts.append(support_line)
+
+    parts.append(f"k3s cluster suitability: {eval_res.get('k3s_suitability', 'unknown')}")
+
+    hardware = eval_res.get("hardware") or {}
+    specs = []
+    if hardware.get("ram"):
+        specs.append(f"RAM {hardware['ram']}")
+    if hardware.get("storage"):
+        specs.append(f"storage {hardware['storage']}")
+    if hardware.get("score") is not None:
+        specs.append(f"curated score {hardware['score']}/5")
+    if specs:
+        parts.append("Device specs: " + ", ".join(specs))
+
+    suitability_reasons = [r for r in (eval_res.get("suitability_reasons") or []) if r]
+    if suitability_reasons:
+        parts.append(f"Why: {'; '.join(suitability_reasons[:3])}")
     if url:
         parts.append(f"URL: {url}")
 
