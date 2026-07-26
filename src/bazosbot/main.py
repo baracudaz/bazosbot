@@ -155,6 +155,10 @@ def format_message(item, eval_res):
         specs.append(f"storage {hardware['storage']}")
     if hardware.get("score") is not None:
         specs.append(f"curated score {hardware['score']}/5")
+    if hardware.get("tier"):
+        specs.append(f"tier {hardware['tier']}")
+    if hardware.get("codename"):
+        specs.append(f"codename {hardware['codename']}")
     if specs:
         parts.append("Device specs: " + ", ".join(specs))
 

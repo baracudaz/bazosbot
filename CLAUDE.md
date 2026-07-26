@@ -90,10 +90,24 @@ under `data/`.
 
 **Data files (`data/`):**
 - `bazos_search_urls.json` — default list of bazos RSS category URLs, used when neither
-  `BAZOS_SEARCH_URLS` nor `BAZOS_SEARCH_URL` is set in `.env`.
-- `postmarketos_models.json` — curated list of device entries (`device`, `score`, `ram`, `storage`)
-  used as both the search keyword source and the compatibility list; drives the hardware side of
-  `k3s_suitability` scoring (see step 6 above).
+  `BAZOS_SEARCH_URLS` nor `BAZOS_SEARCH_URL` is set in `.env` (both `bazos.sk`/`bazos.cz` sites use
+  numeric per-brand `cat=` IDs under `rub=mo`, independent per country — e.g. Xiaomi is `cat=451` on
+  `.sk` but `cat=455` on `.cz`). Covers every mobile-brand category that has a device in
+  `postmarketos_models.json` (Xiaomi, Google, Samsung, Huawei, Motorola, Nokia, Sony, plus the
+  "other brands" catch-all for OnePlus/Fairphone/LG/etc.), so when adding devices from a brand not
+  already covered, add that brand's `rub=mo&cat=` URL too or matches for it will never be scanned.
+  Apple/Realme are intentionally omitted (no devices in the models file). Also includes the generic
+  `rub=pc&cat=12` ("PC, Počítače") category, the most plausible bucket sellers use for SBCs like
+  Raspberry Pi — bazos has no dedicated tablet or single-board-computer category.
+- `postmarketos_models.json` — curated list of device entries (`device`, `tier`, `codename`, `score`,
+  `ram`, `storage`) used as both the search keyword source and the compatibility list; drives the
+  hardware side of `k3s_suitability` scoring (see step 6 above). `tier`/`codename` are
+  documentation-only (traceable back to the upstream [pmaports](https://github.com/external-mirrors/pmaports)
+  package, e.g. `device/community/device-fairphone-fp4`) and aren't read by any code — only
+  `score`/`ram`/`storage` feed the evaluator. `score` is capped at 2 for `testing`-tier devices
+  regardless of hardware, since postmarketOS support there is less mature/complete than `community`.
+  Devices with an **archived** (`"Archived: Maintainer dropped package"`) or untraceable pmaports
+  package are intentionally excluded — check upstream before re-adding one.
 - `seen.json` — persisted dedup set, sorted/pretty-printed on write.
 
 ## Notes

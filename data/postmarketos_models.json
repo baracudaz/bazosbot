@@ -1,158 +1,730 @@
 [
   {
-    "device": "Raspberry Pi 4 (2/4/8GB)",
-    "score": 5,
-    "ram": "2/4/8 GB",
-    "storage": "microSD or USB-boot SSD (no fixed size)"
-  },
-  {
-    "device": "Raspberry Pi 5 (4/8/16GB)",
-    "score": 5,
-    "ram": "4/8/16 GB",
-    "storage": "microSD or NVMe via PCIe HAT"
-  },
-  {
-    "device": "OnePlus 6T",
-    "score": 4,
-    "ram": "6/8 GB",
-    "storage": "128/256 GB UFS 2.1 (no microSD)"
-  },
-  {
-    "device": "OnePlus 6",
-    "score": 4,
-    "ram": "6/8 GB",
-    "storage": "64/128/256 GB UFS 2.1 (no microSD)"
-  },
-  {
-    "device": "Xiaomi POCO F1 / Pocophone F1",
-    "score": 4,
-    "ram": "6/8 GB",
-    "storage": "64/128/256 GB UFS 2.1 + microSD"
-  },
-  {
-    "device": "Google Pixel 3a",
-    "score": 4,
-    "ram": "4 GB",
-    "storage": "64 GB UFS 2.0 (no microSD)"
-  },
-  {
-    "device": "PINE64 PinePhone Pro",
-    "score": 4,
-    "ram": "4 GB",
-    "storage": "128 GB eMMC + microSD"
-  },
-  {
-    "device": "PINE64 PinePhone",
-    "score": 4,
-    "ram": "2/3 GB",
-    "storage": "16/32 GB eMMC + microSD"
-  },
-  {
-    "device": "Samsung Galaxy S9",
-    "score": 4,
-    "ram": "4 GB",
-    "storage": "64 GB UFS 2.1 + microSD"
-  },
-  {
     "device": "Fairphone 4",
+    "tier": "community",
+    "codename": "fairphone-fp4",
     "score": 4,
     "ram": "6/8 GB",
     "storage": "128/256 GB UFS 2.1 + microSD"
   },
   {
-    "device": "Shift SHIFT6mq",
-    "score": 3,
+    "device": "Google Pixel 3a XL",
+    "tier": "community",
+    "codename": "google-bonito",
+    "score": 4,
     "ram": "4 GB",
-    "storage": "64/128 GB UFS 2.1 + microSD"
+    "storage": "64 GB UFS 2.1 (no microSD)"
+  },
+  {
+    "device": "Google Pixel 3a",
+    "tier": "community",
+    "codename": "google-sargo",
+    "score": 4,
+    "ram": "4 GB",
+    "storage": "64 GB UFS 2.1 (no microSD)"
+  },
+  {
+    "device": "Nokia N900",
+    "tier": "community",
+    "codename": "nokia-n900",
+    "score": 1,
+    "ram": "256 MB",
+    "storage": "32 GB eMMC + microSD"
+  },
+  {
+    "device": "ODROID XU4",
+    "tier": "community",
+    "codename": "odroid-xu4",
+    "score": 3,
+    "ram": "2 GB",
+    "storage": "microSD or eMMC module; USB3 for external SSD"
+  },
+  {
+    "device": "OnePlus 6",
+    "tier": "community",
+    "codename": "oneplus-enchilada",
+    "score": 4,
+    "ram": "6/8 GB",
+    "storage": "64/128/256 GB UFS 2.1 (no microSD)"
+  },
+  {
+    "device": "OnePlus 6T",
+    "tier": "community",
+    "codename": "oneplus-fajita",
+    "score": 4,
+    "ram": "6/8 GB",
+    "storage": "128/256 GB UFS 2.1 (no microSD)"
+  },
+  {
+    "device": "PINE64 PinePhone",
+    "tier": "community",
+    "codename": "pine64-pinephone",
+    "score": 4,
+    "ram": "2/3 GB",
+    "storage": "16/32 GB eMMC + microSD"
+  },
+  {
+    "device": "PINE64 PinePhone Pro",
+    "tier": "community",
+    "codename": "pine64-pinephonepro",
+    "score": 4,
+    "ram": "4 GB",
+    "storage": "128 GB eMMC + microSD"
+  },
+  {
+    "device": "PINE64 ROCKPro64",
+    "tier": "community",
+    "codename": "pine64-rockpro64",
+    "score": 4,
+    "ram": "2/4 GB",
+    "storage": "eMMC/SATA/NVMe options + microSD"
   },
   {
     "device": "Purism Librem 5",
+    "tier": "community",
+    "codename": "purism-librem5",
     "score": 2,
     "ram": "3 GB",
     "storage": "32 GB eMMC + microSD"
   },
   {
-    "device": "Google Pixel 4a",
-    "score": 2,
-    "ram": "6 GB",
-    "storage": "128 GB UFS 2.1 (no microSD)"
-  },
-  {
-    "device": "Xiaomi POCO X3 NFC",
-    "score": 2,
-    "ram": "6/8 GB",
-    "storage": "64/128 GB UFS 2.1 (no microSD)"
-  },
-  {
-    "device": "Xiaomi 9T / Mi 9T / Redmi K20",
-    "score": 4,
-    "ram": "6 GB",
-    "storage": "64/128 GB UFS 2.1 (no microSD)"
-  },
-  {
-    "device": "Xiaomi Redmi Note 4 / 4X",
-    "score": 2,
-    "ram": "2/3/4 GB",
-    "storage": "16/32/64 GB eMMC + microSD"
-  },
-  {
-    "device": "Google Pixel 4",
-    "score": 2,
-    "ram": "6 GB",
-    "storage": "64/128 GB UFS 2.1 (no microSD)"
-  },
-  {
-    "device": "Google Pixel 3",
-    "score": 2,
-    "ram": "4 GB",
-    "storage": "64/128 GB UFS 2.1 (no microSD)"
-  },
-  {
-    "device": "Xiaomi Redmi 5 Plus",
-    "score": 2,
-    "ram": "3/4 GB",
-    "storage": "32/64 GB eMMC + microSD"
-  },
-  {
-    "device": "Xiaomi Redmi 7",
-    "score": 2,
-    "ram": "2/3 GB",
-    "storage": "16/32/64 GB eMMC + microSD"
-  },
-  {
-    "device": "Xiaomi Redmi 4 Prime",
-    "score": 2,
-    "ram": "3 GB",
-    "storage": "32 GB eMMC (no microSD)"
-  },
-  {
-    "device": "Samsung Galaxy S III",
-    "score": 2,
-    "ram": "1 GB",
-    "storage": "16 GB eMMC + microSD"
-  },
-  {
-    "device": "Xiaomi Mi Max 2",
-    "score": 1,
-    "ram": "4 GB",
-    "storage": "64/128 GB eMMC (no microSD)"
-  },
-  {
-    "device": "Samsung Galaxy A21s",
-    "score": 1,
-    "ram": "3/4 GB",
-    "storage": "32/64/128 GB eMMC 5.1 + microSD"
-  },
-  {
     "device": "Samsung Galaxy Core Prime VE LTE",
+    "tier": "community",
+    "codename": "samsung-coreprimevelte",
     "score": 1,
     "ram": "1 GB",
     "storage": "8 GB eMMC + microSD"
   },
   {
-    "device": "Vsmart Joy 3",
+    "device": "Samsung Galaxy Tab 2 10.1",
+    "tier": "community",
+    "codename": "samsung-espresso10",
+    "score": 1,
+    "ram": "1 GB",
+    "storage": "16 GB eMMC + microSD"
+  },
+  {
+    "device": "Samsung Galaxy Tab 2 7.0",
+    "tier": "community",
+    "codename": "samsung-espresso7",
+    "score": 1,
+    "ram": "1 GB",
+    "storage": "8/16 GB eMMC + microSD"
+  },
+  {
+    "device": "Samsung Galaxy S III",
+    "tier": "community",
+    "codename": "samsung-m0",
+    "score": 2,
+    "ram": "1 GB",
+    "storage": "16 GB eMMC + microSD"
+  },
+  {
+    "device": "Samsung Galaxy S9 SM-G9600 (Snapdragon variant, not the common EU Exynos unit)",
+    "tier": "community",
+    "codename": "samsung-starqltechn",
+    "score": 3,
+    "ram": "4 GB",
+    "storage": "64 GB UFS 2.1 + microSD"
+  },
+  {
+    "device": "SHIFT SHIFT6mq",
+    "tier": "community",
+    "codename": "shift-axolotl",
+    "score": 3,
+    "ram": "4 GB",
+    "storage": "64/128 GB UFS 2.1 + microSD"
+  },
+  {
+    "device": "Xiaomi POCO F1 / Pocophone F1",
+    "tier": "community",
+    "codename": "xiaomi-beryllium",
+    "score": 4,
+    "ram": "6/8 GB",
+    "storage": "64/128/256 GB UFS 2.1 + microSD"
+  },
+  {
+    "device": "Google Pixel 3",
+    "tier": "testing",
+    "codename": "google-blueline",
+    "score": 2,
+    "ram": "4 GB",
+    "storage": "64/128 GB UFS 2.1 (no microSD)"
+  },
+  {
+    "device": "Google Pixel 4",
+    "tier": "testing",
+    "codename": "google-flame",
+    "score": 2,
+    "ram": "6 GB",
+    "storage": "64/128 GB UFS 2.1 (no microSD)"
+  },
+  {
+    "device": "Google Pixel 6",
+    "tier": "testing",
+    "codename": "google-oriole",
+    "score": 2,
+    "ram": "8 GB",
+    "storage": "128/256 GB UFS 3.1 (no microSD)"
+  },
+  {
+    "device": "Google Pixel 6 Pro",
+    "tier": "testing",
+    "codename": "google-raven",
+    "score": 2,
+    "ram": "12 GB",
+    "storage": "128/256/512 GB UFS 3.1 (no microSD)"
+  },
+  {
+    "device": "Google Pixel 6a",
+    "tier": "testing",
+    "codename": "google-bluejay",
+    "score": 2,
+    "ram": "6 GB",
+    "storage": "128 GB UFS 3.1 (no microSD)"
+  },
+  {
+    "device": "Google Nexus 7 (2013)",
+    "tier": "testing",
+    "codename": "asus-flo",
+    "score": 1,
+    "ram": "2 GB",
+    "storage": "16/32 GB eMMC (no microSD)"
+  },
+  {
+    "device": "OnePlus One",
+    "tier": "testing",
+    "codename": "oneplus-bacon",
+    "score": 1,
+    "ram": "3 GB",
+    "storage": "16/64 GB eMMC (no microSD)"
+  },
+  {
+    "device": "OnePlus Nord N100",
+    "tier": "testing",
+    "codename": "oneplus-billie2",
+    "score": 1,
+    "ram": "4 GB",
+    "storage": "64 GB eMMC (no microSD)"
+  },
+  {
+    "device": "OnePlus 7 Pro",
+    "tier": "testing",
+    "codename": "oneplus-guacamole",
+    "score": 2,
+    "ram": "6/8/12 GB",
+    "storage": "128/256 GB UFS 3.0 (no microSD)"
+  },
+  {
+    "device": "OnePlus 8 Pro",
+    "tier": "testing",
+    "codename": "oneplus-instantnoodlep",
+    "score": 2,
+    "ram": "8/12 GB",
+    "storage": "128/256 GB UFS 3.0 (no microSD)"
+  },
+  {
+    "device": "OnePlus 8T",
+    "tier": "testing",
+    "codename": "oneplus-kebab",
+    "score": 2,
+    "ram": "8/12 GB",
+    "storage": "128/256 GB UFS 3.1 (no microSD)"
+  },
+  {
+    "device": "Google Nexus 5",
+    "tier": "testing",
+    "codename": "lg-hammerhead",
+    "score": 1,
+    "ram": "2 GB",
+    "storage": "16/32 GB eMMC (no microSD)"
+  },
+  {
+    "device": "Google Nexus 5X",
+    "tier": "testing",
+    "codename": "lg-bullhead",
+    "score": 1,
+    "ram": "2 GB",
+    "storage": "16/32 GB eMMC (no microSD)"
+  },
+  {
+    "device": "LG G7 ThinQ",
+    "tier": "testing",
+    "codename": "lg-judyln",
+    "score": 2,
+    "ram": "4/6 GB",
+    "storage": "64/128 GB UFS 2.1 + microSD"
+  },
+  {
+    "device": "LG V35 ThinQ",
+    "tier": "testing",
+    "codename": "lg-judyp",
+    "score": 2,
+    "ram": "6 GB",
+    "storage": "64/128 GB UFS 2.1 + microSD"
+  },
+  {
+    "device": "Huawei Nexus 6P",
+    "tier": "testing",
+    "codename": "huawei-angler",
+    "score": 1,
+    "ram": "3 GB",
+    "storage": "32/64/128 GB UFS (no microSD)"
+  },
+  {
+    "device": "Huawei Maimang 5 / G9 Plus / Nova Plus",
+    "tier": "testing",
+    "codename": "huawei-milan",
     "score": 1,
     "ram": "3/4 GB",
     "storage": "32/64 GB eMMC + microSD"
+  },
+  {
+    "device": "Asus ZenFone Max Pro M1",
+    "tier": "testing",
+    "codename": "asus-x00td",
+    "score": 1,
+    "ram": "3/4/6 GB",
+    "storage": "32/64 GB eMMC + microSD"
+  },
+  {
+    "device": "Asus Zenfone 3",
+    "tier": "testing",
+    "codename": "asus-zenfone3",
+    "score": 1,
+    "ram": "3/4 GB",
+    "storage": "32/64 GB eMMC + microSD"
+  },
+  {
+    "device": "HTC One M8s",
+    "tier": "testing",
+    "codename": "htc-m8qlul",
+    "score": 1,
+    "ram": "2 GB",
+    "storage": "16 GB eMMC + microSD"
+  },
+  {
+    "device": "HTC One Mini 2",
+    "tier": "testing",
+    "codename": "htc-memul",
+    "score": 1,
+    "ram": "1 GB",
+    "storage": "16 GB eMMC + microSD"
+  },
+  {
+    "device": "Sony Xperia Z3",
+    "tier": "testing",
+    "codename": "sony-leo",
+    "score": 1,
+    "ram": "2 GB",
+    "storage": "16 GB eMMC + microSD"
+  },
+  {
+    "device": "Sony Xperia XA2",
+    "tier": "testing",
+    "codename": "sony-pioneer",
+    "score": 1,
+    "ram": "3/4 GB",
+    "storage": "32/64 GB eMMC + microSD"
+  },
+  {
+    "device": "Sony Xperia XA1 Ultra",
+    "tier": "testing",
+    "codename": "sony-redwood",
+    "score": 1,
+    "ram": "4 GB",
+    "storage": "32/64 GB eMMC + microSD"
+  },
+  {
+    "device": "Sony Xperia M4 Aqua",
+    "tier": "testing",
+    "codename": "sony-tulip",
+    "score": 1,
+    "ram": "2 GB",
+    "storage": "16 GB eMMC + microSD"
+  },
+  {
+    "device": "Sony Xperia 1 III",
+    "tier": "testing",
+    "codename": "sony-pdx215",
+    "score": 2,
+    "ram": "12 GB",
+    "storage": "256/512 GB UFS 3.1 + microSD"
+  },
+  {
+    "device": "Motorola Edge 30",
+    "tier": "testing",
+    "codename": "motorola-dubai",
+    "score": 2,
+    "ram": "8 GB",
+    "storage": "128/256 GB UFS 3.1 (no microSD)"
+  },
+  {
+    "device": "HMD Global Nokia 6.1",
+    "tier": "testing",
+    "codename": "nokia-pl2",
+    "score": 1,
+    "ram": "3/4 GB",
+    "storage": "32/64 GB eMMC + microSD"
+  },
+  {
+    "device": "Nokia Lumia 640 LTE",
+    "tier": "testing",
+    "codename": "microsoft-dempsey",
+    "score": 1,
+    "ram": "1 GB",
+    "storage": "8 GB eMMC + microSD"
+  },
+  {
+    "device": "Nokia Lumia 640 XL",
+    "tier": "testing",
+    "codename": "microsoft-makepeace",
+    "score": 1,
+    "ram": "1 GB",
+    "storage": "8 GB eMMC + microSD"
+  },
+  {
+    "device": "Nokia Lumia 830",
+    "tier": "testing",
+    "codename": "nokia-tesla",
+    "score": 1,
+    "ram": "1 GB",
+    "storage": "16 GB eMMC + microSD"
+  },
+  {
+    "device": "Nothing Phone (1)",
+    "tier": "testing",
+    "codename": "nothing-spacewar",
+    "score": 2,
+    "ram": "8/12 GB",
+    "storage": "128/256 GB UFS 3.1 (no microSD)"
+  },
+  {
+    "device": "Nothing CMF Phone 1",
+    "tier": "testing",
+    "codename": "nothing-tetris",
+    "score": 2,
+    "ram": "8 GB",
+    "storage": "128/256 GB UFS 2.2 (no microSD)"
+  },
+  {
+    "device": "Wileyfox Swift",
+    "tier": "testing",
+    "codename": "wileyfox-crackling",
+    "score": 1,
+    "ram": "2 GB",
+    "storage": "16 GB eMMC + microSD"
+  },
+  {
+    "device": "BlackBerry KEY2",
+    "tier": "testing",
+    "codename": "blackberry-key2-generic",
+    "score": 2,
+    "ram": "6 GB",
+    "storage": "64/128 GB UFS 2.1 + microSD"
+  },
+  {
+    "device": "Vivo Y21L",
+    "tier": "testing",
+    "codename": "vivo-y21l",
+    "score": 1,
+    "ram": "3 GB",
+    "storage": "32 GB eMMC + microSD"
+  },
+  {
+    "device": "Fairphone 2",
+    "tier": "testing",
+    "codename": "fairphone-fp2",
+    "score": 1,
+    "ram": "2 GB",
+    "storage": "32 GB eMMC + microSD"
+  },
+  {
+    "device": "Fairphone 3",
+    "tier": "testing",
+    "codename": "fairphone-fp3",
+    "score": 2,
+    "ram": "4 GB",
+    "storage": "64 GB UFS 2.1 + microSD"
+  },
+  {
+    "device": "Fairphone 5",
+    "tier": "testing",
+    "codename": "fairphone-fp5",
+    "score": 2,
+    "ram": "8 GB",
+    "storage": "256 GB UFS 3.1 + microSD"
+  },
+  {
+    "device": "Fairphone (Gen. 6)",
+    "tier": "testing",
+    "codename": "fairphone-fp6",
+    "score": 2,
+    "ram": "8 GB",
+    "storage": "256 GB UFS 3.1 + microSD"
+  },
+  {
+    "device": "Xiaomi Redmi Note 8 Pro",
+    "tier": "testing",
+    "codename": "xiaomi-begonia",
+    "score": 2,
+    "ram": "6 GB",
+    "storage": "64/128 GB UFS 2.1 + microSD"
+  },
+  {
+    "device": "Xiaomi Mi 9",
+    "tier": "testing",
+    "codename": "xiaomi-cepheus",
+    "score": 2,
+    "ram": "6/8 GB",
+    "storage": "64/128/256 GB UFS 2.1 (no microSD)"
+  },
+  {
+    "device": "Xiaomi Mi Pad 4",
+    "tier": "testing",
+    "codename": "xiaomi-clover",
+    "score": 1,
+    "ram": "3/4 GB",
+    "storage": "32/64 GB eMMC (no microSD)"
+  },
+  {
+    "device": "Xiaomi Mi Pad 5 Pro",
+    "tier": "testing",
+    "codename": "xiaomi-elish",
+    "score": 2,
+    "ram": "6/8 GB",
+    "storage": "128/256 GB UFS 3.1 (no microSD)"
+  },
+  {
+    "device": "Xiaomi Mi 8 Pro",
+    "tier": "testing",
+    "codename": "xiaomi-equuleus",
+    "score": 2,
+    "ram": "8 GB",
+    "storage": "128 GB UFS 2.1 (no microSD)"
+  },
+  {
+    "device": "Xiaomi Mi 10T Lite 5G",
+    "tier": "testing",
+    "codename": "xiaomi-gauguin",
+    "score": 2,
+    "ram": "6 GB",
+    "storage": "64/128 GB UFS 2.1 + microSD"
+  },
+  {
+    "device": "Xiaomi Mi 5",
+    "tier": "testing",
+    "codename": "xiaomi-gemini",
+    "score": 1,
+    "ram": "3/4 GB",
+    "storage": "32/64/128 GB eMMC/UFS 2.0 (no microSD)"
+  },
+  {
+    "device": "Xiaomi Mi A2",
+    "tier": "testing",
+    "codename": "xiaomi-jasmine_sprout",
+    "score": 1,
+    "ram": "4/6 GB",
+    "storage": "32/64/128 GB eMMC (no microSD)"
+  },
+  {
+    "device": "Xiaomi Redmi 9",
+    "tier": "testing",
+    "codename": "xiaomi-lancelot",
+    "score": 1,
+    "ram": "3/4 GB",
+    "storage": "32/64 GB eMMC + microSD"
+  },
+  {
+    "device": "Xiaomi Mi A3",
+    "tier": "testing",
+    "codename": "xiaomi-laurel",
+    "score": 2,
+    "ram": "4/6 GB",
+    "storage": "64/128 GB UFS 2.1 + microSD"
+  },
+  {
+    "device": "Xiaomi Redmi Note 7",
+    "tier": "testing",
+    "codename": "xiaomi-lavender",
+    "score": 1,
+    "ram": "3/4 GB",
+    "storage": "32/64 GB eMMC + microSD"
+  },
+  {
+    "device": "Xiaomi Redmi Note 9 Pro / Redmi Note 9S",
+    "tier": "testing",
+    "codename": "xiaomi-miatoll",
+    "score": 2,
+    "ram": "4/6 GB",
+    "storage": "64/128 GB UFS 2.1 + microSD"
+  },
+  {
+    "device": "Xiaomi Pad 5",
+    "tier": "testing",
+    "codename": "xiaomi-nabu",
+    "score": 2,
+    "ram": "6/8 GB",
+    "storage": "128/256 GB UFS 3.1 (no microSD)"
+  },
+  {
+    "device": "Xiaomi Pad 6",
+    "tier": "testing",
+    "codename": "xiaomi-pipa",
+    "score": 2,
+    "ram": "6/8 GB",
+    "storage": "128/256 GB UFS 3.1 (no microSD)"
+  },
+  {
+    "device": "Xiaomi Mi 9 Lite",
+    "tier": "testing",
+    "codename": "xiaomi-pyxis",
+    "score": 2,
+    "ram": "6 GB",
+    "storage": "64/128 GB UFS 2.1 (no microSD)"
+  },
+  {
+    "device": "Xiaomi Mi Note 2",
+    "tier": "testing",
+    "codename": "xiaomi-scorpio",
+    "score": 1,
+    "ram": "4/6 GB",
+    "storage": "64/128 GB UFS 2.0 (no microSD)"
+  },
+  {
+    "device": "Xiaomi Redmi Note 6 Pro",
+    "tier": "testing",
+    "codename": "xiaomi-tulip",
+    "score": 1,
+    "ram": "4/6 GB",
+    "storage": "64 GB eMMC + microSD"
+  },
+  {
+    "device": "Xiaomi POCO X3 Pro",
+    "tier": "testing",
+    "codename": "xiaomi-vayu",
+    "score": 2,
+    "ram": "6/8 GB",
+    "storage": "128/256 GB UFS 2.1 + microSD"
+  },
+  {
+    "device": "Xiaomi Redmi Note 5 Pro",
+    "tier": "testing",
+    "codename": "xiaomi-whyred",
+    "score": 1,
+    "ram": "4/6 GB",
+    "storage": "64 GB eMMC + microSD"
+  },
+  {
+    "device": "Samsung Galaxy A5 (2015)",
+    "tier": "testing",
+    "codename": "samsung-a5",
+    "score": 1,
+    "ram": "2 GB",
+    "storage": "16 GB eMMC + microSD"
+  },
+  {
+    "device": "Samsung Galaxy S4",
+    "tier": "testing",
+    "codename": "samsung-jflte",
+    "score": 1,
+    "ram": "2 GB",
+    "storage": "16 GB eMMC + microSD"
+  },
+  {
+    "device": "Samsung Galaxy Tab S 10.5",
+    "tier": "testing",
+    "codename": "samsung-chagallwifi",
+    "score": 1,
+    "ram": "3 GB",
+    "storage": "16/32 GB eMMC + microSD"
+  },
+  {
+    "device": "Samsung Galaxy Tab S 8.4 LTE",
+    "tier": "testing",
+    "codename": "samsung-klimtlte",
+    "score": 1,
+    "ram": "3 GB",
+    "storage": "16 GB eMMC + microSD"
+  },
+  {
+    "device": "Samsung Galaxy J5 (2015)",
+    "tier": "testing",
+    "codename": "samsung-j5",
+    "score": 1,
+    "ram": "1.5 GB",
+    "storage": "8/16 GB eMMC + microSD"
+  },
+  {
+    "device": "Samsung Galaxy J5 (2016)",
+    "tier": "testing",
+    "codename": "samsung-j5x",
+    "score": 1,
+    "ram": "2 GB",
+    "storage": "16 GB eMMC + microSD"
+  },
+  {
+    "device": "Samsung Galaxy Grand Prime",
+    "tier": "testing",
+    "codename": "samsung-fortuna",
+    "score": 1,
+    "ram": "1 GB",
+    "storage": "8 GB eMMC + microSD"
+  },
+  {
+    "device": "Samsung Galaxy Grand Max",
+    "tier": "testing",
+    "codename": "samsung-grandmax",
+    "score": 1,
+    "ram": "1.5 GB",
+    "storage": "16 GB eMMC + microSD"
+  },
+  {
+    "device": "Samsung Galaxy S III mini",
+    "tier": "testing",
+    "codename": "samsung-golden",
+    "score": 1,
+    "ram": "1 GB",
+    "storage": "8 GB eMMC + microSD"
+  },
+  {
+    "device": "Samsung Galaxy Note 10.1 (2014) WiFi",
+    "tier": "testing",
+    "codename": "samsung-n1awifi",
+    "score": 1,
+    "ram": "3 GB",
+    "storage": "16/32 GB eMMC + microSD"
+  },
+  {
+    "device": "Samsung Galaxy Tab Pro 10.1 WiFi",
+    "tier": "testing",
+    "codename": "samsung-n2awifi",
+    "score": 1,
+    "ram": "2 GB",
+    "storage": "16/32 GB eMMC + microSD"
+  },
+  {
+    "device": "ODROID C4",
+    "tier": "testing",
+    "codename": "odroid-c4",
+    "score": 2,
+    "ram": "4 GB",
+    "storage": "eMMC module or microSD"
+  },
+  {
+    "device": "ODROID N2+",
+    "tier": "testing",
+    "codename": "odroid-n2plus",
+    "score": 2,
+    "ram": "2/4 GB",
+    "storage": "eMMC module or microSD"
+  },
+  {
+    "device": "Xunlong Orange Pi 5 Plus",
+    "tier": "testing",
+    "codename": "xunlong-orangepi5-plus",
+    "score": 2,
+    "ram": "4/8/16/32 GB",
+    "storage": "eMMC module or microSD; NVMe via M.2"
   }
 ]

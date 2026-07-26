@@ -198,6 +198,8 @@ def _heuristic_evaluate(
             "ram": best_meta.get("ram"),
             "storage": best_meta.get("storage"),
             "score": best_meta.get("score"),
+            "tier": best_meta.get("tier"),
+            "codename": best_meta.get("codename"),
         }
 
     return {
