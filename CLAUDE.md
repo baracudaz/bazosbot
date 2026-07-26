@@ -18,15 +18,17 @@ pip install -r requirements.txt
 # Run
 python -m src.bazosbot.main
 
-# Lint (required after any code change — see .github/copilot-instructions.md)
+# Lint (required after any code change; resolve any remaining issues before finishing)
 ruff check . --fix
 ```
+
+Always work inside the project virtualenv (`.venv`).
 
 There is no test suite in this repo currently.
 
 Config lives in `.env` (copy from `.env.example`): `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`,
 `BAZOS_SEARCH_URLS`/`BAZOS_SEARCH_URL`, `CHECK_INTERVAL`, `LOG_LEVEL`, `POSTMARKETOS_MODELS_FILE`,
-`MIN_PRICE_EUR`, `MAX_PRICE_EUR`.
+`MIN_PRICE_EUR`, `MAX_PRICE_EUR`, `MIN_K3S_SCORE`.
 
 ### Deployment
 
@@ -70,11 +72,15 @@ under `data/`.
    (nvme/ssd > ufs > emmc), and the curated `score` field (`score<=1` forces `"no"`, `score<=2` caps
    at `"maybe"`). Purely heuristic — no AI/network calls despite the `ai_used` field in its output
    (always `False`).
-7. `main.format_message()` builds the Telegram text; `notifier.send_telegram()` sends it.
-8. Dedup state (`data/seen.json`) is keyed by listing URL (or a title fallback) and is only persisted
+7. `main_loop` drops the match if the best-matched device's curated `score` is below
+   `MIN_K3S_SCORE` (default `2`; `0` disables it) — this is the main lever for cutting notification
+   noise from confirmed-but-weak-hardware devices without removing them from the models file.
+   Matches with no scored device (e.g. a legacy plain-string models file) are never filtered by this.
+8. `main.format_message()` builds the Telegram text; `notifier.send_telegram()` sends it.
+9. Dedup state (`data/seen.json`) is keyed by listing URL (or a title fallback) and is only persisted
    once a Telegram send succeeds (or immediately if Telegram isn't configured) — so a failed send
    causes the listing to be retried next cycle.
-9. `SIGINT`/`SIGTERM` trigger a graceful shutdown that persists `seen.json` before exit.
+10. `SIGINT`/`SIGTERM` trigger a graceful shutdown that persists `seen.json` before exit.
 
 **Module boundaries:**
 - `postmarketos.py` — loads the supported-device list from a file (JSON array or newline-delimited
@@ -107,11 +113,14 @@ under `data/`.
   `score`/`ram`/`storage` feed the evaluator. `score` is capped at 2 for `testing`-tier devices
   regardless of hardware, since postmarketOS support there is less mature/complete than `community`.
   Devices with an **archived** (`"Archived: Maintainer dropped package"`) or untraceable pmaports
-  package are intentionally excluded — check upstream before re-adding one.
+  package are intentionally excluded — check upstream before re-adding one. Run
+  `python -m src.scripts.check_postmarketos_models` to diff this file against live pmaports
+  (`src/scripts/check_postmarketos_models.py`, a standalone read-only report deliberately kept out of
+  `src/bazosbot/` since it isn't part of the bot's runtime import graph — no automated fixup).
 - `seen.json` — persisted dedup set, sorted/pretty-printed on write.
 
 ## Notes
 
-- Ruff config/cache exists (`.ruff_cache/`) — run `ruff check . --fix` after edits and resolve any
-  remaining issues before finishing, per `.github/copilot-instructions.md`.
+- Ruff config/cache exists (`.ruff_cache/`) — always run `ruff check . --fix` after making code
+  changes and resolve any remaining issues before finishing.
 - The bazos HTML fallback scraper is heuristic and may need tuning; RSS is the preferred/primary path.

@@ -63,6 +63,9 @@ CHECK_INTERVAL = int(os.getenv("CHECK_INTERVAL", "300"))
 MIN_PRICE_EUR = float(os.getenv("MIN_PRICE_EUR", "0"))
 MAX_PRICE_EUR = float(os.getenv("MAX_PRICE_EUR", "50"))  # strict max bound; entries without parseable price are excluded
 POSTMARKETOS_MODELS_FILE = os.getenv("POSTMARKETOS_MODELS_FILE", "data/postmarketos_models.json")
+# Minimum curated device score (1-5) required to notify; 0 disables the filter.
+# Matches with no scored device (e.g. an unscored/legacy models file entry) are never filtered out.
+MIN_K3S_SCORE = float(os.getenv("MIN_K3S_SCORE", "2"))
 
 
 
@@ -259,6 +262,12 @@ def main_loop():
                 }, supported_models, min_price_eur=MIN_PRICE_EUR, max_price_eur=MAX_PRICE_EUR)
                 logger.debug("evaluation result: postmarketos=%s confidence=%.2f k3s=%s ai=%s", eval_res.get('postmarketos_support'), eval_res.get('support_confidence'), eval_res.get('k3s_suitability'), eval_res.get('ai_used'))
                 logger.debug("evaluation reasons=%s", eval_res.get('reasons'))
+
+                device_score = (eval_res.get('hardware') or {}).get('score')
+                if device_score is not None and device_score < MIN_K3S_SCORE:
+                    logger.debug("filtering out match '%s': device score %s is below MIN_K3S_SCORE (%s)", uid, device_score, MIN_K3S_SCORE)
+                    filtered_out_count += 1
+                    continue
 
                 # attach evaluation to message
                 msg = format_message(m, eval_res)

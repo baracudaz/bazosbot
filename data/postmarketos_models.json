@@ -273,9 +273,9 @@
   },
   {
     "device": "Huawei Maimang 5 / G9 Plus / Nova Plus",
-    "tier": "testing",
+    "tier": "community",
     "codename": "huawei-milan",
-    "score": 1,
+    "score": 2,
     "ram": "3/4 GB",
     "storage": "32/64 GB eMMC + microSD"
   },
@@ -441,9 +441,9 @@
   },
   {
     "device": "Fairphone 3",
-    "tier": "testing",
+    "tier": "community",
     "codename": "fairphone-fp3",
-    "score": 2,
+    "score": 4,
     "ram": "4 GB",
     "storage": "64 GB UFS 2.1 + microSD"
   },
@@ -616,14 +616,6 @@
     "storage": "64 GB eMMC + microSD"
   },
   {
-    "device": "Samsung Galaxy A5 (2015)",
-    "tier": "testing",
-    "codename": "samsung-a5",
-    "score": 1,
-    "ram": "2 GB",
-    "storage": "16 GB eMMC + microSD"
-  },
-  {
     "device": "Samsung Galaxy S4",
     "tier": "testing",
     "codename": "samsung-jflte",
@@ -726,5 +718,85 @@
     "score": 2,
     "ram": "4/8/16/32 GB",
     "storage": "eMMC module or microSD; NVMe via M.2"
+  },
+  {
+    "device": "SHIFT SHIFTphone 8",
+    "tier": "testing",
+    "codename": "shift-otter",
+    "score": 2,
+    "ram": "12 GB",
+    "storage": "256/512 GB UFS 3.1 + microSD"
+  },
+  {
+    "device": "Xiaomi Redmi 4 Prime",
+    "tier": "community",
+    "codename": "xiaomi-markw",
+    "score": 2,
+    "ram": "3 GB",
+    "storage": "32 GB eMMC (no microSD)"
+  },
+  {
+    "device": "Xiaomi Redmi Note 4 / 4X",
+    "tier": "community",
+    "codename": "xiaomi-mido",
+    "score": 2,
+    "ram": "2/3/4 GB",
+    "storage": "16/32/64 GB eMMC + microSD"
+  },
+  {
+    "device": "Xiaomi Redmi 7",
+    "tier": "community",
+    "codename": "xiaomi-onclite",
+    "score": 2,
+    "ram": "2/3 GB",
+    "storage": "16/32/64 GB eMMC + microSD"
+  },
+  {
+    "device": "Xiaomi Mi A1",
+    "tier": "community",
+    "codename": "xiaomi-tissot",
+    "score": 2,
+    "ram": "4 GB",
+    "storage": "64 GB eMMC + microSD"
+  },
+  {
+    "device": "Xiaomi Redmi 5 Plus",
+    "tier": "community",
+    "codename": "xiaomi-vince",
+    "score": 2,
+    "ram": "3/4 GB",
+    "storage": "32/64 GB eMMC + microSD"
+  },
+  {
+    "device": "Xiaomi Mi Max 2",
+    "tier": "community",
+    "codename": "xiaomi-oxygen",
+    "score": 1,
+    "ram": "4 GB",
+    "storage": "64/128 GB eMMC (no microSD)"
+  },
+  {
+    "device": "Google Pixel 4a",
+    "tier": "community",
+    "codename": "google-sunfish",
+    "score": 2,
+    "ram": "6 GB",
+    "storage": "128 GB UFS 2.1 (no microSD)"
+  },
+  {
+    "device": "Xiaomi 9T / Mi 9T / Redmi K20",
+    "tier": "community",
+    "codename": "xiaomi-davinci",
+    "score": 2,
+    "ram": "6 GB",
+    "storage": "64/128 GB UFS 2.1 (no microSD)"
+  },
+  {
+    "device": "Xiaomi POCO X3 NFC",
+    "tier": "community",
+    "codename": "xiaomi-surya",
+    "score": 2,
+    "ram": "6/8 GB",
+    "storage": "64/128 GB UFS 2.1 + microSD"
   }
 ]

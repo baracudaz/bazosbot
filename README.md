@@ -24,6 +24,23 @@ postmarketOS-supported devices and notifies via Telegram (alerts-only mode).
 - **Search URLs**: By default, the bot scans the RSS feeds listed in `data/bazos_search_urls.json`. You can customize this file or override it by setting `BAZOS_SEARCH_URLS` (comma-separated list) or `BAZOS_SEARCH_URL` in `.env`.
 - **Supported Devices**: The list of target device model names is loaded from the file specified by the `POSTMARKETOS_MODELS_FILE` env var, which defaults to `data/postmarketos_models.json`.
 - **Price Filtering**: Set `MIN_PRICE_EUR` and `MAX_PRICE_EUR` in `.env` to restrict matches. Listings with missing or unparseable prices are automatically skipped.
+- **Device Score Filtering**: Set `MIN_K3S_SCORE` in `.env` to suppress notifications for devices with a curated score (1-5, see `data/postmarketos_models.json`) below that threshold. Matches for a device with no score on record are never filtered. Defaults to `2`; set to `0` to disable.
+
+## Keeping the device list current
+
+`data/postmarketos_models.json` is a curated snapshot, not a live query — postmarketOS device
+support tiers do change (e.g. a device's package can go from `community` to `archived` if its
+maintainer drops it). To check the file against the live
+[pmaports](https://github.com/external-mirrors/pmaports) repo:
+
+```bash
+python -m src.scripts.check_postmarketos_models
+```
+
+This reports devices that became stale (archived/removed upstream), tier changes, and new
+community/testing device packages we don't have yet. It's read-only — it prints a report and
+doesn't modify `data/postmarketos_models.json`; adding new devices still requires filling in
+RAM/storage/score by hand (pmaports doesn't have that data).
 
 ## Graceful Shutdown
 
